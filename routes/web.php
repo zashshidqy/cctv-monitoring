@@ -4,6 +4,7 @@ use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CameraController;
 use App\Http\Controllers\MonitoringController;
+use App\Http\Controllers\PlaybackController;
 use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\StoreController;
 use App\Http\Controllers\UserController;
@@ -28,6 +29,14 @@ Route::middleware('auth')->group(function () {
     Route::prefix('monitoring')->name('monitoring.')->group(function () {
         Route::get('/', [MonitoringController::class, 'index'])->name('index');
         Route::get('/stores/geojson', [MonitoringController::class, 'storesGeoJson'])->name('stores.geojson');
+    });
+
+    // Playback Session & Stream Endpoints (Epic 5)
+    Route::prefix('playback')->name('playback.')->middleware('auth')->group(function () {
+        Route::post('/sessions', [PlaybackController::class, 'startSession'])->name('sessions.start');
+        Route::post('/sessions/{sessionId}/heartbeat', [PlaybackController::class, 'heartbeat'])->name('sessions.heartbeat');
+        Route::post('/sessions/{sessionId}/release', [PlaybackController::class, 'release'])->name('sessions.release');
+        Route::get('/stream/{token}', [PlaybackController::class, 'streamFeed'])->name('stream.feed');
     });
 
     // Admin routes (Master Admin only by default)
