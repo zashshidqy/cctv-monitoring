@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Store;
 use App\Models\User;
+use App\Services\StoreStatusService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -11,6 +12,10 @@ use Inertia\Response;
 
 class MonitoringController extends Controller
 {
+    public function __construct(
+        protected StoreStatusService $statusService
+    ) {}
+
     /**
      * Display the main map-first monitoring workspace.
      */
@@ -59,10 +64,20 @@ class MonitoringController extends Controller
             $query->whereIn('id', $scope);
         }
 
+        // Search filter (code, name, city)
+        if ($search = $request->query('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('code', 'like', "%{$search}%")
+                    ->orWhere('name', 'like', "%{$search}%")
+                    ->orWhere('city', 'like', "%{$search}%");
+            });
+        }
+
         $stores = $query->get();
 
         $features = $stores->map(function (Store $store) {
-            // For Epic 1, provide deterministic mock camera counts until Epic 4/6
+            $health = $this->statusService->getStoreHealthSummary($store);
+
             return [
                 'type' => 'Feature',
                 'geometry' => [
@@ -75,16 +90,20 @@ class MonitoringController extends Controller
                     'name' => $store->name,
                     'city' => $store->city,
                     'address' => $store->address,
-                    // Epic 1 stub status — will be computed dynamically in Epic 4/6
-                    'markerStatus' => 'online',
-                    'cameraTotal' => 6,
-                    'cameraOnline' => 6,
-                    'cameraUnstable' => 0,
-                    'cameraOffline' => 0,
-                    'cameraUnknown' => 0,
+                    'markerStatus' => $health['markerStatus'],
+                    'cameraTotal' => $health['cameraTotal'],
+                    'cameraOnline' => $health['cameraOnline'],
+                    'cameraUnstable' => $health['cameraUnstable'],
+                    'cameraOffline' => $health['cameraOffline'],
+                    'cameraUnknown' => $health['cameraUnknown'],
                 ],
             ];
         });
+
+        // Filter by markerStatus if specified
+        if ($statusFilter = $request->query('status')) {
+            $features = $features->filter(fn ($f) => $f['properties']['markerStatus'] === $statusFilter)->values();
+        }
 
         return response()->json([
             'type' => 'FeatureCollection',

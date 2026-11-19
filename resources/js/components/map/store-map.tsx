@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import * as maplibregl from 'maplibre-gl';
-import { Compass, Maximize2, Minimize2, Layers, RotateCcw } from 'lucide-react';
+import { RotateCcw, Search, MapPin, CheckCircle, AlertTriangle, XCircle, SlidersHorizontal } from 'lucide-react';
 import type { StoreMarkerData } from '@/types';
 
 interface TileConfig {
@@ -19,15 +19,6 @@ interface StoreMapProps {
     searchQuery?: string;
 }
 
-/**
- * StoreMap — MapLibre GL JS vector map component.
- * Features:
- * - Provider abstraction via tileConfig (OSM raster in dev, MapTiler/vector in prod)
- * - 2D default with smooth pitch easing up to max 15-20°
- * - Manual 2D / Tilt toggle
- * - Store marker and cluster support
- * - Respects prefers-reduced-motion
- */
 export const StoreMap: React.FC<StoreMapProps> = ({
     tileConfig,
     onStoreSelect,
@@ -38,19 +29,18 @@ export const StoreMap: React.FC<StoreMapProps> = ({
     const map = useRef<maplibregl.Map | null>(null);
     const [isLoaded, setIsLoaded] = useState(false);
     const [isTiltEnabled, setIsTiltEnabled] = useState(false);
-    const [currentZoom, setCurrentZoom] = useState(tileConfig.defaultZoom);
     const [stores, setStores] = useState<StoreMarkerData[]>([]);
+    const [statusFilter, setStatusFilter] = useState<'all' | 'online' | 'partial' | 'offline'>('all');
+    const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
     const markersRef = useRef<Map<number, maplibregl.Marker>>(new Map());
 
     // ─── 1. Initialize Map ───────────────────────────────────────────────────
     useEffect(() => {
         if (!mapContainer.current || map.current) return;
 
-        // Build style depending on provider
         let mapStyle: maplibregl.StyleSpecification | string;
 
         if (tileConfig.provider === 'osm') {
-            // Development OSM raster tile style
             mapStyle = {
                 version: 8,
                 sources: {
@@ -72,7 +62,6 @@ export const StoreMap: React.FC<StoreMapProps> = ({
                 ],
             };
         } else {
-            // Vector style URL (MapTiler, Mapbox, or custom vector endpoint)
             mapStyle = tileConfig.styleUrl || 'https://demotiles.maplibre.org/style.json';
         }
 
@@ -81,12 +70,11 @@ export const StoreMap: React.FC<StoreMapProps> = ({
             style: mapStyle,
             center: tileConfig.defaultCenter,
             zoom: tileConfig.defaultZoom,
-            pitch: 0, // Always starts in 2D per specification
-            maxPitch: tileConfig.maxPitch, // Max 20° per design rule
-            attributionControl: false, // Custom attribution placement
+            pitch: 0,
+            maxPitch: tileConfig.maxPitch,
+            attributionControl: false,
         });
 
-        // Add attribution control to bottom right
         mapInstance.addControl(
             new maplibregl.AttributionControl({ compact: true }),
             'bottom-right'
@@ -97,15 +85,9 @@ export const StoreMap: React.FC<StoreMapProps> = ({
             setIsLoaded(true);
         });
 
-        // Track zoom and adjust pitch smoothly
+        // Smooth pitch adjustment based on zoom if tilt is enabled
         mapInstance.on('zoom', () => {
             const z = mapInstance.getZoom();
-            setCurrentZoom(z);
-
-            // Gradual pitch increase if tilt is enabled:
-            // z < 10: 0°
-            // z 10-14: 0° -> 10°
-            // z >= 14: up to max 15-20°
             if (isTiltEnabled) {
                 let targetPitch = 0;
                 if (z >= 14) targetPitch = Math.min(tileConfig.maxPitch, 15);
@@ -145,10 +127,23 @@ export const StoreMap: React.FC<StoreMapProps> = ({
                     setStores(parsedStores);
                 }
             })
-            .catch((err) => console.error('Failed to load store GeoJSON:', err));
+            .catch((err) => console.error('Gagal memuat GeoJSON store:', err));
     }, [isLoaded]);
 
-    // ─── 3. Render HTML Store Markers ─────────────────────────────────────────
+    // ─── 3. Filtered Stores ──────────────────────────────────────────────────
+    const filteredStores = useMemo(() => {
+        return stores.filter((s) => {
+            const matchesStatus =
+                statusFilter === 'all' ? true : s.markerStatus === statusFilter;
+            const matchesSearch = searchQuery.trim()
+                ? s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  s.code.toLowerCase().includes(searchQuery.toLowerCase())
+                : true;
+            return matchesStatus && matchesSearch;
+        });
+    }, [stores, statusFilter, searchQuery]);
+
+    // ─── 4. Render HTML Store Markers with Status Color Rings ────────────────
     useEffect(() => {
         if (!map.current || !isLoaded) return;
 
@@ -156,31 +151,48 @@ export const StoreMap: React.FC<StoreMapProps> = ({
         markersRef.current.forEach((marker) => marker.remove());
         markersRef.current.clear();
 
-        stores.forEach((store) => {
-            // Create DOM element for store marker
+        filteredStores.forEach((store) => {
             const el = document.createElement('button');
             el.type = 'button';
+            el.setAttribute('aria-label', `${store.name} (${store.code})`);
+
+            const isSelected = selectedStoreId === store.id;
+
+            // Status dot color mapping
+            const statusColor =
+                store.markerStatus === 'online'
+                    ? '#16834A'
+                    : store.markerStatus === 'partial'
+                    ? '#B7791F'
+                    : store.markerStatus === 'offline'
+                    ? '#C62828'
+                    : '#68727D';
+
             el.className = `
                 group relative flex items-center justify-center
                 w-9 h-9 rounded-full bg-white border-2 border-white
                 shadow-[0_3px_10px_rgba(24,32,40,0.18)]
-                transition-transform duration-150 hover:scale-110 focus:outline-none
-                ${selectedStoreId === store.id ? 'ring-3 ring-[#E60012]/40 scale-110 z-10' : ''}
+                transition-transform duration-150 hover:scale-110 focus:outline-none cursor-pointer
+                ${isSelected ? 'ring-3 ring-[#E60012]/40 scale-110 z-20' : 'z-10'}
             `;
 
-            // Inner status ring and icon
             el.innerHTML = `
                 <span class="w-7 h-7 rounded-full bg-[#E60012] flex items-center justify-center text-white text-[10px] font-bold tracking-tight">
                     O!
                 </span>
-                <span class="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-[#16834A] border-2 border-white"></span>
+                <span class="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white" style="background-color: ${statusColor};"></span>
+                <span class="absolute -bottom-6 left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap bg-[#252A30] text-white text-[10px] font-medium px-2 py-0.5 rounded shadow-md pointer-events-none z-30">
+                    ${store.name}
+                </span>
             `;
 
             el.addEventListener('click', () => {
                 onStoreSelect?.(store);
-                map.current?.easeTo({
+                map.current?.flyTo({
                     center: [store.longitude, store.latitude],
-                    duration: 500,
+                    zoom: 14,
+                    pitch: isTiltEnabled ? 15 : 0,
+                    duration: 800,
                 });
             });
 
@@ -190,9 +202,21 @@ export const StoreMap: React.FC<StoreMapProps> = ({
 
             markersRef.current.set(store.id, marker);
         });
-    }, [stores, isLoaded, selectedStoreId]);
+    }, [filteredStores, isLoaded, selectedStoreId, isTiltEnabled]);
 
-    // ─── 4. Toggle 2D / Tilt View ─────────────────────────────────────────────
+    // ─── 5. Fly To Specific Store ────────────────────────────────────────────
+    const flyToStore = (store: StoreMarkerData) => {
+        onStoreSelect?.(store);
+        setIsSearchDropdownOpen(false);
+        map.current?.flyTo({
+            center: [store.longitude, store.latitude],
+            zoom: 15,
+            pitch: isTiltEnabled ? 15 : 0,
+            duration: 900,
+        });
+    };
+
+    // ─── 6. Toggle 2D / Tilt View ─────────────────────────────────────────────
     const toggleTilt = () => {
         if (!map.current) return;
         const newTilt = !isTiltEnabled;
@@ -204,7 +228,7 @@ export const StoreMap: React.FC<StoreMapProps> = ({
         });
     };
 
-    // ─── 5. Reset bearing / pitch ─────────────────────────────────────────────
+    // ─── 7. Reset View ────────────────────────────────────────────────────────
     const resetView = () => {
         if (!map.current) return;
         map.current.easeTo({
@@ -221,6 +245,94 @@ export const StoreMap: React.FC<StoreMapProps> = ({
         <div className="relative w-full h-full">
             {/* Map Canvas */}
             <div ref={mapContainer} className="w-full h-full" />
+
+            {/* Floating Filter Chips — Top Left */}
+            <div className="absolute top-4 left-4 z-10 flex flex-wrap items-center gap-1.5 bg-white/95 backdrop-blur-xs border border-[#E0E4E8] rounded-[var(--radius-panel)] p-1.5 shadow-[var(--shadow-raised)]">
+                <button
+                    type="button"
+                    onClick={() => setStatusFilter('all')}
+                    className={`px-2.5 py-1 rounded-[var(--radius-control)] text-xs font-medium transition-colors ${
+                        statusFilter === 'all'
+                            ? 'bg-[#252A30] text-white shadow-xs'
+                            : 'text-[#68727D] hover:text-[#252A30] hover:bg-[#EEF0F2]'
+                    }`}
+                >
+                    Semua ({stores.length})
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setStatusFilter('online')}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-[var(--radius-control)] text-xs font-medium transition-colors ${
+                        statusFilter === 'online'
+                            ? 'bg-[#16834A] text-white shadow-xs'
+                            : 'text-[#68727D] hover:text-[#16834A] hover:bg-[#dcfce7]'
+                    }`}
+                >
+                    <span className="w-2 h-2 rounded-full bg-[#16834A]" />
+                    <span>Online</span>
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setStatusFilter('partial')}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-[var(--radius-control)] text-xs font-medium transition-colors ${
+                        statusFilter === 'partial'
+                            ? 'bg-[#B7791F] text-white shadow-xs'
+                            : 'text-[#68727D] hover:text-[#B7791F] hover:bg-[#fef9c3]'
+                    }`}
+                >
+                    <span className="w-2 h-2 rounded-full bg-[#B7791F]" />
+                    <span>Sebagian</span>
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setStatusFilter('offline')}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-[var(--radius-control)] text-xs font-medium transition-colors ${
+                        statusFilter === 'offline'
+                            ? 'bg-[#C62828] text-white shadow-xs'
+                            : 'text-[#68727D] hover:text-[#C62828] hover:bg-[#fee2e2]'
+                    }`}
+                >
+                    <span className="w-2 h-2 rounded-full bg-[#C62828]" />
+                    <span>Offline</span>
+                </button>
+            </div>
+
+            {/* Search Dropdown Indicator if Query entered */}
+            {searchQuery.trim().length > 0 && filteredStores.length > 0 && (
+                <div className="absolute top-16 left-4 z-20 w-72 bg-white border border-[#E0E4E8] rounded-[var(--radius-panel)] shadow-[var(--shadow-raised-lg)] max-h-60 overflow-y-auto p-1.5 animate-in fade-in slide-in-from-top-1 duration-150">
+                    <p className="px-2.5 py-1 text-[10px] uppercase font-semibold text-[#68727D] tracking-wider">
+                        Hasil Pencarian ({filteredStores.length})
+                    </p>
+                    <div className="space-y-0.5">
+                        {filteredStores.map((s) => (
+                            <button
+                                key={s.id}
+                                type="button"
+                                onClick={() => flyToStore(s)}
+                                className="w-full text-left px-2.5 py-2 rounded-[var(--radius-control)] hover:bg-[#EEF0F2] flex items-center justify-between transition-colors"
+                            >
+                                <div>
+                                    <p className="text-xs font-semibold text-[#252A30] leading-none">
+                                        {s.name}
+                                    </p>
+                                    <p className="text-[10px] text-[#68727D] mt-1 font-mono">{s.code}</p>
+                                </div>
+                                <span
+                                    className="w-2 h-2 rounded-full shrink-0 ml-2"
+                                    style={{
+                                        backgroundColor:
+                                            s.markerStatus === 'online'
+                                                ? '#16834A'
+                                                : s.markerStatus === 'partial'
+                                                ? '#B7791F'
+                                                : '#C62828',
+                                    }}
+                                />
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Floating Map Controls — Top Right */}
             <div className="absolute top-4 right-4 flex flex-col gap-1.5 z-10">

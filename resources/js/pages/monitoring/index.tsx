@@ -97,10 +97,10 @@ export default function MonitoringIndex({ tileConfig }: MonitoringIndexProps) {
                     <div className="flex-1 overflow-y-auto p-4 space-y-4">
                         <div className="p-3 bg-[#EEF0F2] rounded-[var(--radius-card)] text-xs text-[#68727D]">
                             <p className="font-semibold text-[#252A30] mb-1">
-                                Foundation Mode (Epic 1)
+                                Store Monitor (Epic 3 Aktif)
                             </p>
                             <p>
-                                Panel Camera Explorer dan Dynamic Mosaic akan diaktifkan secara penuh pada <span className="font-medium text-[#252A30]">Epic 4 & 5</span> setelah verifikasi konektivitas gateway MediaMTX (Epic 0 PoC).
+                                Status Store: <strong className="text-[#252A30] capitalize">{selectedStore.markerStatus}</strong> ({selectedStore.cameraOnline} Online, {selectedStore.cameraUnstable} Unstable, {selectedStore.cameraOffline} Offline). Streaming real-time kamera akan aktif pada <span className="font-medium text-[#252A30]">Epic 4 & 5</span>.
                             </p>
                         </div>
 
@@ -111,29 +111,39 @@ export default function MonitoringIndex({ tileConfig }: MonitoringIndexProps) {
                             </p>
 
                             <div className="space-y-2">
-                                {[
-                                    { name: 'Kamera 01 — Kasir Utama', area: 'Kasir', status: 'online' },
-                                    { name: 'Kamera 02 — Area Masuk', area: 'Entrance', status: 'online' },
-                                    { name: 'Kamera 03 — Lorong Belakang', area: 'Aisle', status: 'online' },
-                                    { name: 'Kamera 04 — Loading Dock', area: 'Gudang', status: 'online' },
-                                ].map((cam, idx) => (
-                                    <div
-                                        key={idx}
-                                        className="p-3 bg-white border border-[#E0E4E8] rounded-[var(--radius-card)] shadow-xs flex items-center justify-between hover:border-[#E60012]/40 transition-colors cursor-pointer"
-                                    >
-                                        <div className="flex items-center gap-2.5">
-                                            <div className="w-8 h-8 rounded-lg bg-[#EEF0F2] flex items-center justify-center text-[#68727D]">
-                                                <Video className="w-4 h-4" />
-                                            </div>
-                                            <div>
-                                                <p className="text-xs font-medium text-[#252A30]">{cam.name}</p>
-                                                <p className="text-[10px] text-[#68727D]">{cam.area}</p>
-                                            </div>
-                                        </div>
+                                {Array.from({ length: selectedStore.cameraTotal }).map((_, idx) => {
+                                    const camNum = String(idx + 1).padStart(2, '0');
+                                    let status = 'online';
+                                    if (selectedStore.markerStatus === 'offline') {
+                                        status = 'offline';
+                                    } else if (selectedStore.markerStatus === 'partial' && idx >= selectedStore.cameraOnline) {
+                                        status = idx === selectedStore.cameraOnline ? 'unstable' : 'offline';
+                                    }
 
-                                        <StatusBadge status={cam.status as any} />
-                                    </div>
-                                ))}
+                                    const areas = ['Kasir Utama', 'Area Pintu Masuk', 'Lorong Belakang', 'Loading Dock / Gudang', 'Area Parkir', 'Chiller / Rak Dingin'];
+                                    const area = areas[idx % areas.length];
+
+                                    return (
+                                        <div
+                                            key={idx}
+                                            className="p-3 bg-white border border-[#E0E4E8] rounded-[var(--radius-card)] shadow-xs flex items-center justify-between hover:border-[#E60012]/40 transition-colors cursor-pointer"
+                                        >
+                                            <div className="flex items-center gap-2.5">
+                                                <div className="w-8 h-8 rounded-lg bg-[#EEF0F2] flex items-center justify-center text-[#68727D]">
+                                                    <Video className="w-4 h-4" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-medium text-[#252A30]">
+                                                        Kamera {camNum} — {area}
+                                                    </p>
+                                                    <p className="text-[10px] text-[#68727D]">{area}</p>
+                                                </div>
+                                            </div>
+
+                                            <StatusBadge status={status as any} />
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>
