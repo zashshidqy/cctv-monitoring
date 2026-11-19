@@ -1,7 +1,10 @@
 <?php
 
+use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\MonitoringController;
+use App\Http\Controllers\RolePermissionController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -30,5 +33,20 @@ Route::middleware('auth')->group(function () {
         Route::get('/', function () {
             return Inertia::render('admin/overview');
         })->name('overview');
+
+        // User Management (Epic 2)
+        Route::get('/users', [UserController::class, 'index'])->name('users.index');
+        Route::post('/users', [UserController::class, 'store'])->name('users.store');
+        Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
+        Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+        Route::get('/users/{user}/permissions', [UserController::class, 'permissions'])->name('users.permissions');
+        Route::post('/users/{user}/permissions', [UserController::class, 'updatePermissions'])->name('users.permissions.update');
+
+        // Roles & Permissions Catalog (Epic 2)
+        Route::get('/roles-permissions', [RolePermissionController::class, 'index'])->name('roles.index');
+        Route::put('/roles-permissions/{role}', [RolePermissionController::class, 'updateRolePermissions'])->name('roles.update');
+
+        // Activity Log (Audit Trail)
+        Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('logs.index');
     });
 });
