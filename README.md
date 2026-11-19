@@ -1,77 +1,58 @@
-# O!Save Monitor — Documentation Pack
+<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
-**Versi dokumen:** 1.0.0  
-**Tanggal:** 20 November 2026  
-**Status:** Product & design baseline; beberapa keputusan infrastruktur masih perlu validasi lapangan.
+<p align="center">
+<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
+<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
+<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
+<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
+</p>
 
-## Tujuan paket
+## About Laravel
 
-Paket ini menjadi sumber acuan utama untuk product owner, designer, developer, QA, dan AI coding agent yang membangun **O!Save Monitor**, aplikasi web internal untuk memantau CCTV dari banyak store O!Save.
+Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
 
-Produk menggunakan pengalaman **map-first** yang terinspirasi dari Trafik.live, tetapi bukan aplikasi publik. Sistem harus memerlukan autentikasi dan membatasi data serta live stream berdasarkan role dan store assignment.
+- [Simple, fast routing engine](https://laravel.com/docs/routing).
+- [Powerful dependency injection container](https://laravel.com/docs/container).
+- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
+- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
+- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
+- [Robust background job processing](https://laravel.com/docs/queues).
+- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
 
-## Cara menggunakan dokumen
+Laravel is accessible, powerful, and provides tools required for large, robust applications.
 
-1. Baca `AGENTS.md` sebelum mengubah atau membuat kode.
-2. Baca `docs/00-PROJECT-OVERVIEW.md` dan `docs/01-PRD.md` untuk memahami produk.
-3. Gunakan `docs/04-DESIGN-SYSTEM.md` dan `docs/05-UI-UX-SPECIFICATION.md` sebagai acuan visual dan interaksi.
-4. Gunakan dokumen arsitektur, streaming, RBAC, keamanan, serta data model sebelum membangun backend.
-5. Kerjakan backlog berdasarkan `docs/21-IMPLEMENTATION-BACKLOG.md` dan perbarui statusnya.
-6. Validasi setiap hasil terhadap `docs/20-TESTING-ACCEPTANCE.md`.
+## Learning Laravel
 
-## Struktur dokumen
+Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
 
-| File | Isi |
-|---|---|
-| `AGENTS.md` | Instruksi kerja untuk AI coding agent |
-| `00-PROJECT-OVERVIEW.md` | Ringkasan produk, tujuan, prinsip, asumsi |
-| `01-PRD.md` | Product Requirements Document dan MVP |
-| `02-INFORMATION-ARCHITECTURE.md` | Struktur halaman dan navigasi |
-| `03-USER-FLOWS.md` | Alur pengguna utama |
-| `04-DESIGN-SYSTEM.md` | Design tokens, palet warna, neumorphism |
-| `05-UI-UX-SPECIFICATION.md` | Spesifikasi halaman dan UX |
-| `06-INTERACTION-MOTION.md` | Motion, loading, transisi, feedback |
-| `07-COMPONENT-SPECIFICATION.md` | Komponen UI reusable |
-| `08-RESPONSIVE-ACCESSIBILITY.md` | Responsive dan accessibility |
-| `09-ROLE-ACCESS-CONTROL.md` | Role, permission, store scope |
-| `10-CAMERA-CONNECTIVITY.md` | Jenis koneksi dan flow konfigurasi kamera |
-| `11-STREAMING-ARCHITECTURE.md` | Media gateway dan browser playback |
-| `12-MAP-SPECIFICATION.md` | MapLibre, marker, cluster, pitch 2.5D |
-| `13-DATA-MODEL.md` | Entitas dan relasi data |
-| `14-ALERTS-HEALTH-MONITORING.md` | Health check dan lifecycle alert |
-| `15-SECURITY-PRIVACY.md` | Security, credential, privasi, audit |
-| `16-TECHNICAL-ARCHITECTURE.md` | Stack kandidat dan arsitektur sistem |
-| `17-ROADMAP.md` | Tahap pengembangan |
-| `18-DEPLOYMENT-OPERATIONS.md` | Environment dan operasi |
-| `19-DECISIONS-OPEN-QUESTIONS.md` | Keputusan terkunci dan hal yang belum diketahui |
-| `20-TESTING-ACCEPTANCE.md` | QA, acceptance criteria, test plan |
-| `21-IMPLEMENTATION-BACKLOG.md` | Backlog implementasi bertahap |
-| `REFERENCES.md` | Referensi resmi teknologi dan brand |
+In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
 
-## Status keputusan
+You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
 
-### Sudah disepakati
+## Agentic Development
 
-- Aplikasi adalah **internal web app** untuk CCTV pada banyak store O!Save.
-- Halaman utama adalah map-first, dengan marker untuk store, bukan marker untuk setiap kamera.
-- Klik marker membuka store popup; dari sana pengguna membuka floating Camera Explorer; memilih kamera membuka Camera Focus.
-- Map tetap menjadi konteks utama ketika panel kamera dibuka.
-- Map menggunakan tampilan 2D sebagai default dan perspektif semi-3D yang halus dengan pitch target maksimum sekitar 15–20°.
-- Style menggunakan **modern light neumorphism**, dengan referensi komponen shadcn/ui dan Aceternity UI secara selektif.
-- Identitas visual menggunakan warna O!Save; palet merah/putih pada dokumen ini masih token draft dan wajib divalidasi dengan aset brand resmi.
-- Master Admin, GM, SV, dan Staff adalah role awal.
-- GM dapat melihat seluruh store; SV hanya store yang ditugaskan; Staff ditahan dalam akses terbatas sampai Master Admin memberi permission; Master Admin memiliki kontrol penuh.
-- Kamera offline harus menghasilkan status dan alert yang jelas.
-- Sistem harus menampung beberapa metode koneksi kamera, dengan konfigurasi yang mudah dipahami tim.
+Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
 
-### Belum dipastikan
+```bash
+composer require laravel/boost --dev
 
-- Jumlah store, kamera per store, model perangkat, vendor, firmware, topologi jaringan, serta bandwidth.
-- Apakah setiap store dapat dijangkau melalui private network/VPN atau membutuhkan edge gateway.
-- Hak GM/SV untuk acknowledge atau menyelesaikan alert.
-- Kebutuhan recording/playback rekaman (tidak termasuk MVP).
-- Penyedia vector tiles dan lisensi/biaya map.
-- Server, kapasitas concurrent viewer, dan target latency.
-- Nilai warna resmi dan file logo resmi O!Save.
+php artisan boost:install
+```
 
-**Jangan mengarang jawaban atas hal yang belum dipastikan.** Gunakan asumsi yang ditandai dan buat keputusan teknis yang mudah diubah.
+Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+
+## Contributing
+
+Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+
+## Code of Conduct
+
+In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+
+## Security Vulnerabilities
+
+If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+
+## License
+
+The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
