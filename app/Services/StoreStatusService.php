@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\CameraStatus;
 use App\MarkerStatus;
 use App\Models\Store;
 
@@ -9,8 +10,7 @@ class StoreStatusService
 {
     /**
      * Compute deterministic marker status and camera health breakdown for a store.
-     * In Epic 3, uses deterministic store metadata or mock profile;
-     * In Epic 4-6, reads from camera_health_checks and camera records.
+     * Evaluates active cameras from the database when present, or deterministic demo profile.
      *
      * @return array{
      *     markerStatus: string,
@@ -23,9 +23,37 @@ class StoreStatusService
      */
     public function getStoreHealthSummary(Store $store): array
     {
-        // Deterministic profile based on store code for testability
+        $activeCameras = $store->cameras()->active()->get();
+
+        if ($activeCameras->isNotEmpty()) {
+            $total = $activeCameras->count();
+            $online = $activeCameras->where('status', CameraStatus::Online->value)->count();
+            $unstable = $activeCameras->where('status', CameraStatus::Unstable->value)->count();
+            $offline = $activeCameras->where('status', CameraStatus::Offline->value)->count();
+            $unknown = $activeCameras->where('status', CameraStatus::Unknown->value)->count();
+
+            if ($total === 0) {
+                $status = MarkerStatus::Unknown->value;
+            } elseif ($online === $total) {
+                $status = MarkerStatus::Online->value;
+            } elseif ($offline === $total) {
+                $status = MarkerStatus::Offline->value;
+            } else {
+                $status = MarkerStatus::Partial->value;
+            }
+
+            return [
+                'markerStatus' => $status,
+                'cameraTotal' => $total,
+                'cameraOnline' => $online,
+                'cameraUnstable' => $unstable,
+                'cameraOffline' => $offline,
+                'cameraUnknown' => $unknown,
+            ];
+        }
+
+        // Deterministic profile based on store code for testability when database has no cameras
         if (str_contains($store->code, 'BDG')) {
-            // Bandung store: Partial (some camera offline)
             return [
                 'markerStatus' => MarkerStatus::Partial->value,
                 'cameraTotal' => 6,
@@ -37,7 +65,6 @@ class StoreStatusService
         }
 
         if (str_contains($store->code, 'SBY')) {
-            // Surabaya store: All offline
             return [
                 'markerStatus' => MarkerStatus::Offline->value,
                 'cameraTotal' => 4,
@@ -48,7 +75,6 @@ class StoreStatusService
             ];
         }
 
-        // Jakarta stores: All online
         return [
             'markerStatus' => MarkerStatus::Online->value,
             'cameraTotal' => 6,

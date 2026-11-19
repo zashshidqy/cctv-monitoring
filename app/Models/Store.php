@@ -46,6 +46,11 @@ class Store extends Model
             ->withTimestamps();
     }
 
+    public function cameras(): HasMany
+    {
+        return $this->hasMany(Camera::class);
+    }
+
     public function scopeActive($query)
     {
         return $query->where('status', 'active');

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CameraController;
 use App\Http\Controllers\MonitoringController;
 use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\StoreController;
@@ -40,6 +41,13 @@ Route::middleware('auth')->group(function () {
         Route::post('/stores', [StoreController::class, 'store'])->name('stores.store');
         Route::put('/stores/{store}', [StoreController::class, 'update'])->name('stores.update');
         Route::delete('/stores/{store}', [StoreController::class, 'destroy'])->name('stores.destroy');
+
+        // Camera Management (Epic 4)
+        Route::get('/cameras', [CameraController::class, 'index'])->name('cameras.index');
+        Route::post('/cameras', [CameraController::class, 'store'])->name('cameras.store');
+        Route::put('/cameras/{camera}', [CameraController::class, 'update'])->name('cameras.update');
+        Route::delete('/cameras/{camera}', [CameraController::class, 'destroy'])->name('cameras.destroy');
+        Route::post('/cameras/test-connection', [CameraController::class, 'testConnection'])->name('cameras.test-connection');
 
         // User Management (Epic 2)
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
