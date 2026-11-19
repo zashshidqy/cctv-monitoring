@@ -1,7 +1,7 @@
 <?php
 
-use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CameraAlertController;
 use App\Http\Controllers\CameraController;
 use App\Http\Controllers\MonitoringController;
 use App\Http\Controllers\PlaybackController;
@@ -39,6 +39,19 @@ Route::middleware('auth')->group(function () {
         Route::get('/stream/{token}', [PlaybackController::class, 'streamFeed'])->name('stream.feed');
     });
 
+    // Activity Log (Audit Trail) — Global, accessible to all authenticated users
+    Route::prefix('activity-logs')->name('logs.')->middleware('auth')->group(function () {
+        Route::get('/', [ActivityLogController::class, 'index'])->name('index');
+    });
+
+    // Camera Alerts & Health (Epic 6)
+    Route::prefix('alerts')->name('alerts.')->middleware('auth')->group(function () {
+        Route::get('/', [CameraAlertController::class, 'index'])->name('index');
+        Route::get('/{id}', [CameraAlertController::class, 'show'])->name('show');
+        Route::post('/{id}/approve', [CameraAlertController::class, 'approve'])->name('approve');
+        Route::post('/{id}/reject', [CameraAlertController::class, 'reject'])->name('reject');
+    });
+
     // Admin routes (Master Admin only by default)
     Route::prefix('admin')->name('admin.')->middleware('role:master_admin')->group(function () {
         Route::get('/', function () {
@@ -69,8 +82,5 @@ Route::middleware('auth')->group(function () {
         // Roles & Permissions Catalog (Epic 2)
         Route::get('/roles-permissions', [RolePermissionController::class, 'index'])->name('roles.index');
         Route::put('/roles-permissions/{role}', [RolePermissionController::class, 'updateRolePermissions'])->name('roles.update');
-
-        // Activity Log (Audit Trail)
-        Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('logs.index');
     });
 });

@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\CameraStatus;
 use App\Models\CameraAlert;
 use App\Models\CameraHealthCheck;
 use Illuminate\Support\Facades\Cache;
@@ -59,7 +58,7 @@ class CameraAlertService
      */
     protected function alertExistsForCameraAndStore(int $cameraId, int $storeId, CameraHealthCheck $check): bool
     {
-        $key = "{$this::ALERT_KEY_PREFIX}:{$cameraId}:{$storeId}";
+        $key = sprintf('%s:%d:%d', static::ALERT_KEY_PREFIX, $cameraId, $storeId);
 
         return Cache::has($key);
     }
@@ -115,14 +114,14 @@ class CameraAlertService
         ]);
 
         // Set cache key to prevent further alert duplication for this event window
-        $key = "{$this::ALERT_KEY_PREFIX}:{$camera->id}:{$camera->store_id}";
-        Cache::put($key, $camera->code, now()->addHours($this::ALERT_WINDOW_HOURS));
+        $key = sprintf('%s:%d:%d', static::ALERT_KEY_PREFIX, $camera->id, $camera->store_id);
+        Cache::put($key, $camera->code, now()->addHours(static::ALERT_WINDOW_HOURS));
     }
 
     /**
      * Detect recovery events from successful health checks.
      */
-    public function detectRecovery(Camera $camera): CameraAlert|null
+    public function detectRecovery(Camera $camera): ?CameraAlert
     {
         $activeAlert = CameraAlert::active()
             ->where('camera_id', $camera->id)
@@ -141,6 +140,7 @@ class CameraAlertService
 
         if ($recentSuccess) {
             $this->resolveAlert($camera, $activeAlert);
+
             return $activeAlert;
         }
 

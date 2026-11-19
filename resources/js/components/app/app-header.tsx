@@ -71,15 +71,18 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                     </Link>
                 )}
 
-                {/* Alert bell with unread count */}
+                {/* Active alerts count badge */}
                 <button
                     type="button"
-                    aria-label="Notifikasi Alert"
-                    className="relative p-1.5 rounded-[var(--radius-control)] text-[#68727D] hover:text-[#252A30] hover:bg-[#EEF0F2] transition-colors"
+                    aria-label="Alert Center"
+                    className="relative p-1.5 rounded-[var(--radius-control)] text-[#68727D] hover:text-[#252A30] hover:bg-[#EEF0F2] transition-colors bg-[#FCE8EA] border border-[#E60012]/30"
+                    title="Alert Center"
                 >
-                    <Bell className="w-4 h-4" />
+                    <Bell className="w-4 h-4 text-[#E60012]" />
                     {unreadAlertCount > 0 && (
-                        <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#E60012]" />
+                        <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#E60012] text-[10px] font-bold text-white animate-pulse">
+                            {unreadAlertCount > 9 ? '9+' : unreadAlertCount}
+                        </span>
                     )}
                 </button>
 

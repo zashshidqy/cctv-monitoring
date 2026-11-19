@@ -6,6 +6,7 @@ import { StorePopup } from '@/components/map/store-popup';
 import { X, Video, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/badge';
+import { AlertBell } from '@/components/alert/alert-bell';
 import type { StoreMarkerData } from '@/types';
 
 interface TileConfig {

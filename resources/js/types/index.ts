@@ -118,21 +118,54 @@ export interface PlaybackSession {
 
 // ─── Alerts ──────────────────────────────────────────────────────────────────
 
-export type AlertStatus = 'active' | 'acknowledged' | 'recovered' | 'closed';
+export type AlertLevel = 'warning' | 'critical';
+export type AlertType = 'camera_offline' | 'camera_unstable' | 'camera_reboot' | 'network_issue' | 'unstable_connection';
+export type AlertApprovalStatus = 'pending' | 'approved' | 'rejected';
+export type AlertStatus = 'active' | 'resolved';
 
-export type AlertType = 'camera_offline' | 'camera_unstable' | 'gateway_offline';
-
-export interface Alert {
+export interface Camera {
     id: number;
     storeId: number;
-    storeName: string;
-    cameraId: number | null;
-    cameraName: string | null;
-    alertType: AlertType;
-    status: AlertStatus;
-    firstDetectedAt: string;
-    lastDetectedAt: string;
-    recoveredAt: string | null;
+    code: string;
+    name: string;
+    areaLabel: string;
+    deviceType: DeviceType;
+    connectionType: ConnectionType;
+    status: CameraStatus;
+    isActive: boolean;
+    lastCheckedAt: string | null;
+    lastSuccessAt: string | null;
+}
+
+export interface CameraAlert {
+    id: number;
+    level: AlertLevel;
+    type: AlertType;
+    summary: string;
+    failure_count: number;
+    last_fired_at: string;
+    is_resolved: boolean;
+    recovered_at: string | null;
+    approval_status: AlertApprovalStatus;
+    approved_by_user_id: number | null;
+    camera?: {
+        id: number;
+        code: string;
+        name: string;
+        store_id: number;
+    };
+    store?: {
+        id: number;
+        name: string;
+        code: string;
+    };
+}
+
+export interface HealthCheck {
+    id: number;
+    result: string;
+    latency_ms: number | null;
+    probed_at: string;
 }
 
 // ─── Shared ──────────────────────────────────────────────────────────────────
