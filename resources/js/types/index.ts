@@ -127,6 +127,24 @@ export type AlertType = 'camera_offline' | 'camera_unstable' | 'camera_reboot' |
 export type AlertApprovalStatus = 'pending' | 'approved' | 'rejected';
 export type AlertStatus = 'active' | 'resolved';
 
+export interface AlertPolicy {
+    id: number;
+    role: 'master_admin' | 'gm' | 'sv' | 'staff';
+    alert_level: AlertLevel | null;
+    allowed_types: AlertType[] | null;
+    require_approval: boolean;
+    deduplication_minutes: number;
+    enabled: boolean;
+    metadata: Record<string, unknown> | null;
+}
+
+export interface AlertSummary {
+    new: number;
+    active: number;
+    resolved: number;
+    total: number;
+}
+
 export interface Camera {
     id: number;
     storeId: number;

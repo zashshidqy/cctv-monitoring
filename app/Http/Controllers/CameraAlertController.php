@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AlertPolicy;
 use App\Models\CameraAlert;
+use App\Models\CameraHealthCheck;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,63 +19,25 @@ class CameraAlertController extends Controller
     /**
      * Get grouped alert summary for a user (new, active, resolved, history).
      * Returns count and list of alerts grouped by store.
+     * Applies role-based alert policies and store scope.
      */
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
 
-        // Group by store for aggregation
-        $countsQuery = CameraAlert::query();
+        // Extract filters from request
+        $filters = [
+            'status' => $request->query('status'), // active, resolved, pending
+            'level' => $request->query('level'),   // warning, critical
+            'type' => $request->query('type'),     // offline, unstable_connection, etc.
+            'store_id' => $request->query('store_id'),
+            'per_page' => $request->input('per_page', 15),
+        ];
 
-        // Apply store scope if needed for GM/SV roles
-        $storeIds = $user->storeAssignments()->pluck('store_id');
-        if ($storeIds->isNotEmpty()) {
-            $countsQuery->where('store_id', $storeIds->all());
-        }
+        // Use service method that applies role-based policies
+        $result = $this->alertService->getAlertsForUser($user, $filters);
 
-        // Count by status
-        $newCount = (clone $countsQuery)->where('is_resolved', false)
-            ->where('first_fired_at', '>=', now()->subHours($this::ALERT_WINDOW_HOURS))
-            ->count();
-
-        $activeCount = (clone $countsQuery)->where('is_resolved', false)
-            ->where('first_fired_at', '<', now()->subHours($this::ALERT_WINDOW_HOURS))
-            ->count();
-
-        $resolvedCount = (clone $countsQuery)->where('is_resolved', true)->count();
-
-        $totalAlerts = $newCount + $activeCount + $resolvedCount;
-
-        // Fetch paginated alerts with store and camera details
-        $alerts = CameraAlert::active()
-            ->select('id', 'level', 'store_id', 'type', 'summary', 'failure_count', 'last_fired_at')
-            ->with(['store:id,name,code', 'camera:id,name,code,store_id'])
-            ->orderBy('last_fired_at', 'desc')
-            ->paginate($request->input('per_page', 15))
-            ->through(fn (CameraAlert $alert) => [
-                'id' => $alert->id,
-                'level' => $alert->level,
-                'store' => [
-                    'id' => $alert->store_id,
-                    'name' => $alert->store->name,
-                    'code' => $alert->store->code,
-                ],
-                'type' => $alert->type,
-                'summary' => $alert->summary,
-                'failure_count' => $alert->failure_count,
-                'last_fired_at' => $alert->last_fired_at->toIso8601String(),
-                'pending_approval' => $alert->approval_status === 'pending',
-            ]);
-
-        return response()->json([
-            'summary' => [
-                'new' => $newCount,
-                'active' => $activeCount,
-                'resolved' => $resolvedCount,
-                'total' => $totalAlerts,
-            ],
-            'alerts' => $alerts,
-        ]);
+        return response()->json($result);
     }
 
     /**
@@ -81,8 +45,7 @@ class CameraAlertController extends Controller
      */
     public function show(int $id): JsonResponse
     {
-        $alert = CameraAlert::with(['store', 'camera', 'approvers'])
-            ->findOrFail($id);
+        $alert = CameraAlert::with(['store', 'camera'])->findOrFail($id);
 
         $user = request()->user();
 
@@ -92,6 +55,28 @@ class CameraAlertController extends Controller
             if (! $userStoreIds->contains($alert->store_id)) {
                 return response()->json(['error' => 'Unauthorized'], 403);
             }
+        }
+
+        // Check if user's policy allows viewing this alert type/level
+        $roles = $user->getRoleNames()->toArray();
+        $canView = false;
+
+        foreach ($roles as $role) {
+            $policy = AlertPolicy::getForRole($role);
+            if ($policy && $policy->allowsAlert($alert->level, $alert->type)) {
+                $canView = true;
+                break;
+            }
+        }
+
+        // Also check master_admin
+        $masterPolicy = AlertPolicy::getForRole('master_admin');
+        if ($masterPolicy && $masterPolicy->allowsAlert($alert->level, $alert->type)) {
+            $canView = true;
+        }
+
+        if (! $canView && ! $user->hasRole('master_admin')) {
+            return response()->json(['error' => 'Alert type not visible per your role policy'], 403);
         }
 
         $healthHistory = CameraHealthCheck::recent($alert->camera_id)
@@ -149,6 +134,21 @@ class CameraAlertController extends Controller
             return response()->json(['error' => 'Alert not in your scope'], 403);
         }
 
+        // Check if policy requires approval for this role
+        $roles = $user->getRoleNames()->toArray();
+        $requiresApproval = false;
+        foreach ($roles as $role) {
+            $policy = AlertPolicy::getForRole($role);
+            if ($policy && $policy->require_approval) {
+                $requiresApproval = true;
+                break;
+            }
+        }
+
+        if (! $requiresApproval && ! $user->hasRole('master_admin')) {
+            return response()->json(['error' => 'Your role does not require approval for alerts'], 403);
+        }
+
         // Mark as approved
         $alert->markAsApproved($user);
 
@@ -180,6 +180,21 @@ class CameraAlertController extends Controller
             return response()->json(['error' => 'Alert not in your scope'], 403);
         }
 
+        // Check if policy requires approval for this role
+        $roles = $user->getRoleNames()->toArray();
+        $requiresApproval = false;
+        foreach ($roles as $role) {
+            $policy = AlertPolicy::getForRole($role);
+            if ($policy && $policy->require_approval) {
+                $requiresApproval = true;
+                break;
+            }
+        }
+
+        if (! $requiresApproval && ! $user->hasRole('master_admin')) {
+            return response()->json(['error' => 'Your role does not require approval for alerts'], 403);
+        }
+
         // Mark as rejected
         $alert->markAsRejected();
 
@@ -189,6 +204,26 @@ class CameraAlertController extends Controller
             'rejected' => true,
             'action' => 'rejected',
             'rejected_at' => now()->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * Get unread alert count for notification badge (lightweight endpoint).
+     */
+    public function unreadCount(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $filters = [
+            'status' => 'active',
+        ];
+
+        $result = $this->alertService->getAlertsForUser($user, $filters);
+
+        return response()->json([
+            'count' => $result['summary']['new'] + $result['summary']['active'],
+            'new' => $result['summary']['new'],
+            'active' => $result['summary']['active'],
         ]);
     }
 }

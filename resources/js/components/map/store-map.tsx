@@ -96,6 +96,23 @@ export const StoreMap: React.FC<StoreMapProps> = ({
             'bottom-right'
         );
 
+        // Handle navigate-to-store event from AlertBell (defined here for cleanup access)
+        const handleNavigateToStore = (event: CustomEvent) => {
+            const { storeId } = event.detail;
+            const storeEntry = markersRef.current.get(storeId);
+            if (storeEntry && map.current) {
+                map.current.flyTo({
+                    center: [storeEntry.store.longitude, storeEntry.store.latitude],
+                    zoom: 15,
+                    pitch: isTiltEnabled ? 18 : 0,
+                    duration: 900,
+                });
+                // Trigger store selection
+                onStoreSelect?.(storeEntry.store);
+            }
+        };
+        window.addEventListener('navigate-to-store', handleNavigateToStore as EventListener);
+
         mapInstance.on('load', () => {
             map.current = mapInstance;
             setIsLoaded(true);
@@ -174,6 +191,7 @@ export const StoreMap: React.FC<StoreMapProps> = ({
         });
 
         return () => {
+            window.removeEventListener('navigate-to-store', handleNavigateToStore as EventListener);
             mapInstance.remove();
             map.current = null;
         };

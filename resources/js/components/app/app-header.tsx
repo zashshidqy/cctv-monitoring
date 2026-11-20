@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import { BrandMark } from './brand-mark';
-import { Bell, ShieldCheck, LogOut, Search } from 'lucide-react';
+import { ShieldCheck, LogOut, Search } from 'lucide-react';
+import { AlertBell } from '@/components/alert/alert-bell';
 import type { SharedProps } from '@/types';
 
 interface AppHeaderProps {
@@ -21,6 +22,16 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 }) => {
     const { auth, unreadAlertCount } = usePage<SharedProps>().props;
     const user = auth.user;
+
+    // Navigate to store on map when alert clicked
+    const handleNavigateToStore = (storeId: number) => {
+        // Emit custom event for map to handle
+        window.dispatchEvent(new CustomEvent('navigate-to-store', { detail: { storeId } }));
+    };
+
+    const handleNavigateToAlertsPage = () => {
+        window.location.href = '/alerts';
+    };
 
     return (
         <header className="h-14 bg-white/95 backdrop-blur-xs border-b border-[#E0E4E8] px-4 flex items-center justify-between gap-4 z-20 shrink-0">
@@ -71,20 +82,14 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                     </Link>
                 )}
 
-                {/* Active alerts count badge */}
-                <button
-                    type="button"
-                    aria-label="Alert Center"
-                    className="relative p-1.5 rounded-[var(--radius-control)] text-[#68727D] hover:text-[#252A30] hover:bg-[#EEF0F2] transition-colors bg-[#FCE8EA] border border-[#E60012]/30"
-                    title="Alert Center"
-                >
-                    <Bell className="w-4 h-4 text-[#E60012]" />
-                    {unreadAlertCount > 0 && (
-                        <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#E60012] text-[10px] font-bold text-white animate-pulse">
-                            {unreadAlertCount > 9 ? '9+' : unreadAlertCount}
-                        </span>
-                    )}
-                </button>
+                {/* Alert Bell Component */}
+                {user && (
+                    <AlertBell
+                        userRole={user.role as 'master_admin' | 'gm' | 'sv' | 'staff'}
+                        onNavigateToStore={handleNavigateToStore}
+                        onNavigateToAlertsPage={handleNavigateToAlertsPage}
+                    />
+                )}
 
                 {/* User Info & Logout */}
                 {user && (

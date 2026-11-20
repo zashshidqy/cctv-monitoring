@@ -56,6 +56,7 @@ Route::middleware('auth')->group(function () {
     // Camera Alerts & Health (Epic 6)
     Route::prefix('alerts')->name('alerts.')->middleware('auth')->group(function () {
         Route::get('/', [CameraAlertController::class, 'index'])->name('index');
+        Route::get('/unread-count', [CameraAlertController::class, 'unreadCount'])->name('unread-count');
         Route::get('/{id}', [CameraAlertController::class, 'show'])->name('show');
         Route::post('/{id}/approve', [CameraAlertController::class, 'approve'])->name('approve');
         Route::post('/{id}/reject', [CameraAlertController::class, 'reject'])->name('reject');
