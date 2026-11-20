@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Gateway;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\Store;
@@ -211,5 +212,49 @@ class DatabaseSeeder extends Seeder
             'assigned_by' => $userModels[0]->id,
             'starts_at' => now(),
         ]);
+
+        // ─── 7. Demo Gateways ──────────────────────────────────────────────────
+        $demoGateways = [
+            [
+                'code' => 'GW-CENTRAL-01',
+                'name' => 'Central Media Gateway (HQ Jakarta)',
+                'type' => 'central',
+                'store_id' => null,
+                'host' => 'gw-central.osave.internal',
+                'port' => 8554,
+                'status' => 'online',
+                'version' => 'v1.4.2',
+                'last_heartbeat_at' => now(),
+                'notes' => 'Central WebRTC / HLS streaming aggregator for HQ monitoring desk.',
+            ],
+            [
+                'code' => 'GW-KMG-01',
+                'name' => 'Edge Gateway Kemang',
+                'type' => 'edge',
+                'store_id' => $storeModels[0]->id,
+                'host' => '192.168.10.254',
+                'port' => 8554,
+                'status' => 'online',
+                'version' => 'v1.4.2',
+                'last_heartbeat_at' => now(),
+                'notes' => 'Store edge RTSP to WebRTC transcoder.',
+            ],
+            [
+                'code' => 'GW-DGO-01',
+                'name' => 'Edge Gateway Dago Bandung',
+                'type' => 'edge',
+                'store_id' => $storeModels[2]->id,
+                'host' => '192.168.20.254',
+                'port' => 8554,
+                'status' => 'online',
+                'version' => 'v1.4.2',
+                'last_heartbeat_at' => now(),
+                'notes' => 'Store edge RTSP transcoder unit.',
+            ],
+        ];
+
+        foreach ($demoGateways as $gw) {
+            Gateway::create($gw);
+        }
     }
 }

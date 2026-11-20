@@ -198,3 +198,30 @@ export interface SharedProps {
     };
     unreadAlertCount: number;
 }
+
+// ─── Gateway ─────────────────────────────────────────────────────────────────
+
+export type GatewayType = 'central' | 'edge';
+export type GatewayStatus = 'online' | 'offline' | 'degraded';
+
+export interface GatewayItem {
+    id: number;
+    code: string;
+    name: string;
+    type: GatewayType;
+    storeId: number | null;
+    store: {
+        id: number;
+        code: string;
+        name: string;
+        city: string;
+    } | null;
+    host: string | null;
+    port: number;
+    status: GatewayStatus;
+    version: string | null;
+    cameraCount: number;
+    lastHeartbeatAt: string | null;
+    notes: string | null;
+    createdAt: string;
+}

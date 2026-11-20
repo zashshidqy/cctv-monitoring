@@ -46,6 +46,11 @@ class Camera extends Model
         return $this->belongsTo(Store::class);
     }
 
+    public function gateway(): BelongsTo
+    {
+        return $this->belongsTo(Gateway::class);
+    }
+
     public function sources(): HasMany
     {
         return $this->hasMany(CameraSource::class);

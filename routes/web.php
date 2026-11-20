@@ -4,6 +4,7 @@ use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CameraAlertController;
 use App\Http\Controllers\CameraController;
+use App\Http\Controllers\GatewayController;
 use App\Http\Controllers\MonitoringController;
 use App\Http\Controllers\PlaybackController;
 use App\Http\Controllers\RolePermissionController;
@@ -48,10 +49,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/stream/{token}', [PlaybackController::class, 'streamFeed'])->name('stream.feed');
     });
 
-    // Activity Log (Audit Trail) — Global, accessible to all authenticated users
-    Route::prefix('activity-logs')->name('logs.')->middleware('auth')->group(function () {
-        Route::get('/', [ActivityLogController::class, 'index'])->name('index');
-    });
+    // Activity Log (Audit Trail) — Redirect shortcut to admin logs
+    Route::get('/activity-logs', fn () => redirect()->route('admin.logs.index'))->middleware('auth');
 
     // Camera Alerts & Health (Epic 6)
     Route::prefix('alerts')->name('alerts.')->middleware('auth')->group(function () {
@@ -80,6 +79,13 @@ Route::middleware('auth')->group(function () {
         Route::delete('/cameras/{camera}', [CameraController::class, 'destroy'])->name('cameras.destroy');
         Route::post('/cameras/test-connection', [CameraController::class, 'testConnection'])->name('cameras.test-connection');
 
+        // Gateway Management
+        Route::get('/gateways', [GatewayController::class, 'index'])->name('gateways.index');
+        Route::post('/gateways', [GatewayController::class, 'store'])->name('gateways.store');
+        Route::put('/gateways/{gateway}', [GatewayController::class, 'update'])->name('gateways.update');
+        Route::delete('/gateways/{gateway}', [GatewayController::class, 'destroy'])->name('gateways.destroy');
+        Route::post('/gateways/{gateway}/ping', [GatewayController::class, 'ping'])->name('gateways.ping');
+
         // User Management (Epic 2)
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::post('/users', [UserController::class, 'store'])->name('users.store');
@@ -91,5 +97,8 @@ Route::middleware('auth')->group(function () {
         // Roles & Permissions Catalog (Epic 2)
         Route::get('/roles-permissions', [RolePermissionController::class, 'index'])->name('roles.index');
         Route::put('/roles-permissions/{role}', [RolePermissionController::class, 'updateRolePermissions'])->name('roles.update');
+
+        // Activity Log (Audit Trail)
+        Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('logs.index');
     });
 });

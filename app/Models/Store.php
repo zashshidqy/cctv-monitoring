@@ -51,6 +51,11 @@ class Store extends Model
         return $this->hasMany(Camera::class);
     }
 
+    public function gateways(): HasMany
+    {
+        return $this->hasMany(Gateway::class);
+    }
+
     public function scopeActive($query)
     {
         return $query->where('status', 'active');
