@@ -68,7 +68,8 @@ export type ConnectionType =
     | 'mjpeg'
     | 'snapshot'
     | 'vendor'
-    | 'custom';
+    | 'custom'
+    | 'youtube_live';
 
 export type DeviceType = 'ip_camera' | 'nvr_channel' | 'dvr_channel' | 'other';
 
@@ -98,7 +99,7 @@ export interface CameraCardData extends Camera {
 
 // ─── Playback ─────────────────────────────────────────────────────────────────
 
-export type PlaybackProtocol = 'webrtc' | 'hls' | 'mjpeg';
+export type PlaybackProtocol = 'webrtc' | 'hls' | 'mjpeg' | 'youtube_live';
 
 export type PlaybackState =
     | 'idle'

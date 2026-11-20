@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head } from '@inertiajs/react';
 import { MonitoringLayout } from '@/layouts/monitoring-layout';
 import { StoreMap } from '@/components/map/store-map';
 import { StorePopup } from '@/components/map/store-popup';
+import { CameraExplorer } from '@/components/camera/camera-explorer';
 import { X, Video, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/badge';
 import { AlertBell } from '@/components/alert/alert-bell';
-import type { StoreMarkerData } from '@/types';
+import type { StoreMarkerData, CameraCardData } from '@/types';
 
 interface TileConfig {
     provider: string;
@@ -22,6 +23,16 @@ interface MonitoringIndexProps {
     tileConfig: TileConfig;
 }
 
+interface StoreCamerasResponse {
+    store: {
+        id: number;
+        code: string;
+        name: string;
+        city: string;
+    };
+    cameras: CameraCardData[];
+}
+
 /**
  * Monitoring Workspace — Map-first landing page.
  * Implements: Login → Monitoring Map → Select Store Marker → Store Popup → Camera Explorer
@@ -31,6 +42,8 @@ export default function MonitoringIndex({ tileConfig }: MonitoringIndexProps) {
     const [selectedStore, setSelectedStore] = useState<StoreMarkerData | null>(null);
     const [isExplorerOpen, setIsExplorerOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [storeCameras, setStoreCameras] = useState<CameraCardData[]>([]);
+    const [camerasLoading, setCamerasLoading] = useState(false);
 
     const handleStoreSelect = (store: StoreMarkerData) => {
         setSelectedStore(store);
@@ -41,6 +54,41 @@ export default function MonitoringIndex({ tileConfig }: MonitoringIndexProps) {
         setSelectedStore(store);
         setIsExplorerOpen(true);
     };
+
+    // Fetch cameras when explorer opens or store changes
+    useEffect(() => {
+        if (!selectedStore || !isExplorerOpen) {
+            setStoreCameras([]);
+            return;
+        }
+
+        let cancelled = false;
+        setCamerasLoading(true);
+
+        fetch(`/monitoring/stores/${selectedStore.id}/cameras`)
+            .then((res) => {
+                if (!res.ok) throw new Error('Gagal memuat daftar kamera');
+                return res.json() as Promise<StoreCamerasResponse>;
+            })
+            .then((data) => {
+                if (!cancelled) {
+                    setStoreCameras(data.cameras);
+                }
+            })
+            .catch((err) => {
+                if (!cancelled) {
+                    console.error('Failed to load cameras:', err);
+                    setStoreCameras([]);
+                }
+            })
+            .finally(() => {
+                if (!cancelled) setCamerasLoading(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [selectedStore, isExplorerOpen]);
 
     return (
         <MonitoringLayout
@@ -67,7 +115,7 @@ export default function MonitoringIndex({ tileConfig }: MonitoringIndexProps) {
                 />
             )}
 
-            {/* Camera Explorer Drawer (Right side floating panel) — Epic 1 Preparation */}
+            {/* Camera Explorer Drawer (Right side floating panel) — Epic 1 & 3 Connected */}
             {selectedStore && isExplorerOpen && (
                 <div className="absolute top-0 right-0 h-full w-full max-w-md bg-white border-l border-[#E0E4E8] shadow-[var(--shadow-raised-lg)] z-20 flex flex-col animate-in slide-in-from-right duration-200">
                     {/* Explorer Header */}
@@ -79,9 +127,15 @@ export default function MonitoringIndex({ tileConfig }: MonitoringIndexProps) {
                                 </span>
                                 <StatusBadge status={selectedStore.markerStatus} />
                             </div>
-                            <h2 className="text-sm font-semibold text-[#252A30]">
+                            <h2 className="text-sm font-semibold text-[#252A30] truncate max-w-[240px]">
                                 {selectedStore.name}
                             </h2>
+                            {selectedStore.city && (
+                                <p className="text-[10px] text-[#68727D] mt-0.5 flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#E60012]" />
+                                    {selectedStore.city}
+                                </p>
+                            )}
                         </div>
 
                         <button
@@ -94,64 +148,25 @@ export default function MonitoringIndex({ tileConfig }: MonitoringIndexProps) {
                         </button>
                     </div>
 
-                    {/* Explorer Body — Epic 1 Foundation view */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                        <div className="p-3 bg-[#EEF0F2] rounded-[var(--radius-card)] text-xs text-[#68727D]">
-                            <p className="font-semibold text-[#252A30] mb-1">
-                                Store Monitor (Epic 3 Aktif)
-                            </p>
-                            <p>
-                                Status Store: <strong className="text-[#252A30] capitalize">{selectedStore.markerStatus}</strong> ({selectedStore.cameraOnline} Online, {selectedStore.cameraUnstable} Unstable, {selectedStore.cameraOffline} Offline). Streaming real-time kamera akan aktif pada <span className="font-medium text-[#252A30]">Epic 4 & 5</span>.
-                            </p>
-                        </div>
-
-                        {/* Camera stub cards */}
-                        <div>
-                            <p className="text-xs font-semibold text-[#252A30] mb-2">
-                                Daftar Kamera Store ({selectedStore.cameraTotal})
-                            </p>
-
-                            <div className="space-y-2">
-                                {Array.from({ length: selectedStore.cameraTotal }).map((_, idx) => {
-                                    const camNum = String(idx + 1).padStart(2, '0');
-                                    let status = 'online';
-                                    if (selectedStore.markerStatus === 'offline') {
-                                        status = 'offline';
-                                    } else if (selectedStore.markerStatus === 'partial' && idx >= selectedStore.cameraOnline) {
-                                        status = idx === selectedStore.cameraOnline ? 'unstable' : 'offline';
-                                    }
-
-                                    const areas = ['Kasir Utama', 'Area Pintu Masuk', 'Lorong Belakang', 'Loading Dock / Gudang', 'Area Parkir', 'Chiller / Rak Dingin'];
-                                    const area = areas[idx % areas.length];
-
-                                    return (
-                                        <div
-                                            key={idx}
-                                            className="p-3 bg-white border border-[#E0E4E8] rounded-[var(--radius-card)] shadow-xs flex items-center justify-between hover:border-[#E60012]/40 transition-colors cursor-pointer"
-                                        >
-                                            <div className="flex items-center gap-2.5">
-                                                <div className="w-8 h-8 rounded-lg bg-[#EEF0F2] flex items-center justify-center text-[#68727D]">
-                                                    <Video className="w-4 h-4" />
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs font-medium text-[#252A30]">
-                                                        Kamera {camNum} — {area}
-                                                    </p>
-                                                    <p className="text-[10px] text-[#68727D]">{area}</p>
-                                                </div>
-                                            </div>
-
-                                            <StatusBadge status={status as any} />
-                                        </div>
-                                    );
-                                })}
+                    {/* Explorer Body — Real Camera Explorer */}
+                    <div className="flex-1 overflow-hidden">
+                        {camerasLoading ? (
+                            <div className="h-full flex items-center justify-center">
+                                <div className="w-8 h-8 border-2 border-[#E60012] border-t-transparent rounded-full animate-spin" />
                             </div>
-                        </div>
+                        ) : (
+                            <CameraExplorer
+                                cameras={storeCameras}
+                                onCameraSelect={(camera) => console.log('Camera selected:', camera)}
+                            />
+                        )}
                     </div>
 
                     {/* Explorer Footer */}
                     <div className="p-3 border-t border-[#E0E4E8] bg-[#F4F5F6] flex justify-between items-center text-[11px] text-[#68727D]">
-                        <span>Stream aktif: 0 (camera-on-demand)</span>
+                        <span>
+                            {storeCameras.length === 0 ? 'Belum ada kamera terdaftar' : `${storeCameras.length} kamera tersedia`}
+                        </span>
                         <Button
                             variant="outline"
                             size="sm"

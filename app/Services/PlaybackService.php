@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\Camera;
 use App\Models\PlaybackSession;
 use App\Models\User;
+use App\Services\CameraAdapters\YouTubeLiveSourceAdapter;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -61,13 +63,33 @@ class PlaybackService
         $sessionId = (string) Str::uuid();
         $token = bin2hex(random_bytes(32));
 
-        // Output protocol selection: WebRTC target, HLS fallback
-        $protocol = in_array($preferredProtocol, ['webrtc', 'hls', 'mjpeg'], true)
-            ? $preferredProtocol
-            : 'webrtc';
+        if ($camera->connection_type === 'youtube_live') {
+            $protocol = 'youtube_live';
+            $primarySource = $camera->primarySource;
+            $embedUrl = null;
+            if ($primarySource && ! empty($primarySource->source_config_encrypted)) {
+                try {
+                    $config = json_decode(Crypt::decryptString($primarySource->source_config_encrypted), true);
+                    $url = $config['url'] ?? $config['video_id'] ?? '';
+                    $adapter = new YouTubeLiveSourceAdapter;
+                    $videoId = $adapter->extractVideoId((string) $url);
+                    if ($videoId) {
+                        $embedUrl = $adapter->getEmbedUrl($videoId);
+                    }
+                } catch (\Throwable) {
+                    // Fallback to placeholder if decryption fails
+                }
+            }
+            $playbackUrl = $embedUrl ?: 'https://www.youtube-nocookie.com/embed/live_stream';
+        } else {
+            // Output protocol selection: WebRTC target, HLS fallback
+            $protocol = in_array($preferredProtocol, ['webrtc', 'hls', 'mjpeg'], true)
+                ? $preferredProtocol
+                : 'webrtc';
 
-        // Browser playback URL (safe, scoped token only, NEVER raw RTSP/source credentials)
-        $playbackUrl = url("/playback/stream/{$token}");
+            // Browser playback URL (safe, scoped token only, NEVER raw RTSP/source credentials)
+            $playbackUrl = url("/playback/stream/{$token}");
+        }
 
         return PlaybackSession::create([
             'session_id' => $sessionId,

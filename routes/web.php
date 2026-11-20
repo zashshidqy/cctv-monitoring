@@ -39,6 +39,7 @@ Route::middleware('auth')->group(function () {
     Route::prefix('monitoring')->name('monitoring.')->group(function () {
         Route::get('/', [MonitoringController::class, 'index'])->name('index');
         Route::get('/stores/geojson', [MonitoringController::class, 'storesGeoJson'])->name('stores.geojson');
+        Route::get('/stores/{store}/cameras', [MonitoringController::class, 'storeCameras'])->name('stores.cameras');
     });
 
     // Playback Session & Stream Endpoints (Epic 5)

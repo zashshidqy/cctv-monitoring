@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Camera;
 use App\Models\Store;
 use App\Models\User;
 use App\Services\StoreStatusService;
@@ -111,6 +112,57 @@ class MonitoringController extends Controller
         return response()->json([
             'type' => 'FeatureCollection',
             'features' => $features,
+        ]);
+    }
+
+    /**
+     * Get authorized list of active cameras for a given store.
+     * Enforces store scope and permissions server-side.
+     */
+    public function storeCameras(Request $request, Store $store): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        if (! $user->hasPermission('cameras.view') && ! $user->hasPermission('monitoring.view')) {
+            abort(403, 'Akses ditolak: Anda tidak memiliki izin untuk melihat daftar kamera.');
+        }
+
+        if (! $user->canAccessStore($store->id)) {
+            abort(403, 'Akses ditolak: Store ini berada di luar cakupan wewenang Anda.');
+        }
+
+        $cameras = $store->cameras()
+            ->active()
+            ->orderBy('channel_number')
+            ->orderBy('name')
+            ->get();
+
+        return response()->json([
+            'store' => [
+                'id' => $store->id,
+                'code' => $store->code,
+                'name' => $store->name,
+                'city' => $store->city,
+            ],
+            'cameras' => $cameras->map(fn (Camera $cam) => [
+                'id' => $cam->id,
+                'storeId' => $cam->store_id,
+                'code' => $cam->code,
+                'name' => $cam->name,
+                'areaLabel' => $cam->area_label,
+                'channelNumber' => $cam->channel_number,
+                'deviceType' => $cam->device_type,
+                'connectionType' => $cam->connection_type,
+                'status' => $cam->status,
+                'isActive' => $cam->is_active,
+                'lastCheckedAt' => $cam->last_checked_at?->toIso8601String(),
+                'lastSuccessAt' => $cam->last_success_at?->toIso8601String(),
+                'previewType' => 'snapshot',
+                'snapshotUrl' => null,
+                'snapshotTakenAt' => null,
+                'isSelected' => false,
+            ]),
         ]);
     }
 }

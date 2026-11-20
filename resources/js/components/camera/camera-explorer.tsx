@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { Grid, Maximize2, Minimize2, Settings, X, Loader2 } from 'lucide-react';
+import { Grid, Maximize2, Minimize2, Settings, X, Loader2, Video, RotateCcw } from 'lucide-react';
 import { CameraPlayer } from './camera-player';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/badge';
@@ -12,42 +12,217 @@ interface CameraExplorerProps {
     onCameraSelect?: (camera: CameraCardData) => void;
 }
 
+const EmptyState = () => (
+    <div className="h-full flex flex-col items-center justify-center text-center text-[#A0AAB5] p-6">
+        <Video className="w-12 h-12 text-[#68727D] mb-3 opacity-50" />
+        <p className="text-sm font-medium text-white">Belum Ada Kamera Terdaftar</p>
+        <p className="text-xs text-[#8C9BA5] mt-1 max-w-sm">
+            Toko ini belum memiliki kamera aktif yang terhubung ke gateway monitoring.
+        </p>
+    </div>
+);
+
+const FocusedView = ({
+    focusedCamera,
+    activeSessions,
+    handleReleaseFocus,
+    handleRetry,
+}: {
+    focusedCamera: CameraCardData;
+    activeSessions: Record<number, { url: string; protocol: 'webrtc' | 'hls' | 'mjpeg' | 'youtube_live' }>;
+    handleReleaseFocus: () => void;
+    handleRetry: (camera: CameraCardData) => void;
+}) => (
+    <div className="h-full flex items-center justify-center animate-in fade-in zoom-in duration-150">
+        <div className="w-full max-w-4xl aspect-video">
+            <CameraPlayer
+                camera={focusedCamera}
+                sessionUrl={activeSessions[focusedCamera.id]?.url || '/playback/stream/placeholder'}
+                protocol={activeSessions[focusedCamera.id]?.protocol || (focusedCamera.connectionType === 'youtube_live' ? 'youtube_live' : 'webrtc')}
+                onClose={handleReleaseFocus}
+                onRetry={() => handleRetry(focusedCamera)}
+                onFullscreen={() => {}}
+                isFocused={true}
+            />
+        </div>
+    </div>
+);
+
+const MosaicGrid = ({
+    cameras,
+    gridSize,
+    displayedCameras,
+    gridCols,
+    activeSessions,
+    loadingIds,
+    startSession,
+    handleFocus,
+    handleRetry,
+}: {
+    cameras: CameraCardData[];
+    gridSize: GridSize;
+    displayedCameras: CameraCardData[];
+    gridCols: string;
+    activeSessions: Record<number, { url: string; protocol: 'webrtc' | 'hls' | 'mjpeg' | 'youtube_live' }>;
+    loadingIds: Set<number>;
+    startSession: (camera: CameraCardData) => void;
+    handleFocus: (camera: CameraCardData) => void;
+    handleRetry: (camera: CameraCardData) => void;
+}) => (
+    <div className={'grid ' + gridCols + ' gap-3 h-full'} role="list" aria-label="Mosaic kamera">
+        {displayedCameras.map((camera) => {
+            const session = activeSessions[camera.id];
+            const isStreaming = !!session;
+            const isLoading = loadingIds.has(camera.id);
+
+            return (
+                <article
+                    key={camera.id}
+                    className="relative bg-[#15191D] rounded-[var(--radius-card)] overflow-hidden group border border-[#252A30]"
+                    role="listitem"
+                >
+                    {/* Camera Card */}
+                    <div className="aspect-video relative">
+                        {!isStreaming ? (
+                            <div
+                                onClick={() => !isLoading && startSession(camera)}
+                                className="w-full h-full flex flex-col items-center justify-center text-[#A0AAB5] p-3 cursor-pointer hover:bg-[#1E2329] transition-colors"
+                            >
+                                {isLoading ? (
+                                    <Loader2 className="w-8 h-8 text-[#E60012] animate-spin mb-2" />
+                                ) : (
+                                    <Video className="w-8 h-8 text-[#E60012]/60 mb-2 group-hover:scale-110 transition-transform" />
+                                )}
+                                <p className="text-xs font-semibold text-white text-center mb-0.5">{camera.name}</p>
+                                <span className="text-[10px] text-[#8C9BA5] mb-1">{camera.areaLabel}</span>
+                                <StatusBadge status={camera.status} />
+                                <p className="text-[10px] mt-2 text-[#68727D]">
+                                    {isLoading ? 'Menyiapkan stream...' : 'Klik untuk putar stream'}
+                                </p>
+                            </div>
+                        ) : (
+                            <CameraPlayer
+                                camera={camera}
+                                sessionUrl={session.url}
+                                protocol={session.protocol}
+                                onClose={() => {}}
+                                onRetry={() => handleRetry(camera)}
+                                onFullscreen={() => handleFocus(camera)}
+                                isFocused={false}
+                            />
+                        )}
+
+                        {/* Play Indicator */}
+                        {isStreaming && (
+                            <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/70 text-white text-[10px] font-mono px-1.5 py-0.5 rounded pointer-events-none">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#16834A] animate-pulse" />
+                                LIVE
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Action Footer */}
+                    <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/95 to-transparent flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                        {!isStreaming ? (
+                            <Button
+                                variant="default"
+                                size="sm"
+                                disabled={isLoading}
+                                onClick={(e) => { e.stopPropagation(); startSession(camera); }}
+                                className="gap-1.5 flex-1 justify-center bg-[#E60012] hover:bg-[#CC0010] text-xs h-7"
+                            >
+                                {isLoading ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                    <Video className="w-3 h-3" />
+                                )}
+                                <span>{isLoading ? 'Menghubungkan...' : 'Mulai Stream'}</span>
+                            </Button>
+                        ) : (
+                            <>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => { e.stopPropagation(); handleFocus(camera); }}
+                                    className="gap-1.5 text-white hover:bg-white/10 text-xs h-7"
+                                >
+                                    <Maximize2 className="w-3 h-3" />
+                                    <span className="hidden sm:inline">Fokus</span>
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => { e.stopPropagation(); handleRetry(camera); }}
+                                    className="gap-1.5 text-white hover:bg-white/10 text-xs h-7"
+                                >
+                                    <RotateCcw className="w-3 h-3" />
+                                    <span className="hidden sm:inline">Refresh</span>
+                                </Button>
+                            </>
+                        )}
+                    </div>
+                </article>
+            );
+        })}
+
+        {/* Empty Slots for incomplete grids */}
+        {displayedCameras.length < gridSize && Array.from({ length: gridSize - displayedCameras.length }).map((_, idx) => (
+            <div
+                key={'empty-' + idx}
+                className="bg-[#15191D] rounded-[var(--radius-card)] border border-dashed border-[#252A30] flex items-center justify-center p-4 text-[#4A5568] text-xs"
+            >
+                Slot Kamera Kosong
+            </div>
+        ))}
+    </div>
+);
+
 export const CameraExplorer: React.FC<CameraExplorerProps> = ({
     cameras,
     onCameraSelect,
 }) => {
     const [gridSize, setGridSize] = useState<GridSize>(4);
     const [focusedCamera, setFocusedCamera] = useState<CameraCardData | null>(null);
-    const [activeSessions, setActiveSessions] = useState<Record<number, { url: string; protocol: 'webrtc' | 'hls' | 'mjpeg' }>>({});
+    const [activeSessions, setActiveSessions] = useState<Record<number, { url: string; protocol: 'webrtc' | 'hls' | 'mjpeg' | 'youtube_live' }>>({});
+    const [loadingIds, setLoadingIds] = useState<Set<number>>(new Set());
 
     const startSession = useCallback(async (camera: CameraCardData) => {
+        setLoadingIds((prev) => new Set(prev).add(camera.id));
         try {
+            const preferredProtocol = camera.connectionType === 'youtube_live' ? 'youtube_live' : 'webrtc';
             const res = await fetch('/playback/sessions', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
                 },
-                body: JSON.stringify({ camera_id: camera.id, protocol: 'webrtc' }),
+                body: JSON.stringify({ camera_id: camera.id, protocol: preferredProtocol }),
             });
 
             if (res.ok) {
                 const data = await res.json();
-                setActiveSessions(prev => ({ ...prev, [camera.id]: { url: data.playbackUrl, protocol: data.protocol } }));
+                setActiveSessions((prev) => ({
+                    ...prev,
+                    [camera.id]: { url: data.playbackUrl, protocol: data.protocol },
+                }));
             }
         } catch (err) {
             console.error('Failed to start playback session:', err);
+        } finally {
+            setLoadingIds((prev) => {
+                const next = new Set(prev);
+                next.delete(camera.id);
+                return next;
+            });
         }
     }, []);
 
     const handleRetry = useCallback((camera: CameraCardData) => {
-        // Trigger session refresh
-        setActiveSessions(prev => {
+        setActiveSessions((prev) => {
             const updated = { ...prev };
             delete updated[camera.id];
             return updated;
         });
-        // Restart session
         startSession(camera);
     }, [startSession]);
 
@@ -63,6 +238,39 @@ export const CameraExplorer: React.FC<CameraExplorerProps> = ({
     // Calculate grid columns
     const gridCols = { 1: 'grid-cols-1', 4: 'grid-cols-2', 9: 'grid-cols-3', 16: 'grid-cols-4' }[gridSize];
     const displayedCameras = cameras.slice(0, gridSize);
+    const activeStreamCount = Object.keys(activeSessions).length;
+
+    // Render grid area content
+    const renderGridArea = () => {
+        if (cameras.length === 0) {
+            return <EmptyState />;
+        }
+
+        if (focusedCamera) {
+            return (
+                <FocusedView
+                    focusedCamera={focusedCamera}
+                    activeSessions={activeSessions}
+                    handleReleaseFocus={handleReleaseFocus}
+                    handleRetry={handleRetry}
+                />
+            );
+        }
+
+        return (
+            <MosaicGrid
+                cameras={cameras}
+                gridSize={gridSize}
+                displayedCameras={displayedCameras}
+                gridCols={gridCols}
+                activeSessions={activeSessions}
+                loadingIds={loadingIds}
+                startSession={startSession}
+                handleFocus={handleFocus}
+                handleRetry={handleRetry}
+            />
+        );
+    };
 
     return (
         <div className="flex flex-col h-full bg-[#15191D] rounded-[var(--radius-panel)] overflow-hidden">
@@ -75,7 +283,7 @@ export const CameraExplorer: React.FC<CameraExplorerProps> = ({
                     <div>
                         <p className="text-sm font-semibold text-white">Camera Explorer</p>
                         <p className="text-[10px] text-[#A0AAB5]">
-                            {cameras.length} kamera tersedia • {activeSessions.length > 0 ? activeSessions.length : 0} stream aktif
+                            {cameras.length} kamera tersedia • {activeStreamCount} stream aktif
                         </p>
                     </div>
                 </div>
@@ -88,11 +296,11 @@ export const CameraExplorer: React.FC<CameraExplorerProps> = ({
                                 key={size}
                                 type="button"
                                 onClick={() => setGridSize(size as GridSize)}
-                                className={`p-1.5 rounded text-[10px] font-semibold font-mono transition-colors ${
+                                className={'px-2 py-1 rounded text-[10px] font-semibold font-mono transition-colors ' + (
                                     gridSize === size
                                         ? 'bg-[#E60012] text-white shadow-xs'
                                         : 'text-[#A0AAB5] hover:text-white hover:bg-[#252A30]'
-                                }`}
+                                )}
                             >
                                 {size === 1 ? '1×1' : size === 4 ? '2×2' : size === 9 ? '3×3' : '4×4'}
                             </button>
@@ -104,7 +312,7 @@ export const CameraExplorer: React.FC<CameraExplorerProps> = ({
                             variant="ghost"
                             size="sm"
                             onClick={handleReleaseFocus}
-                            className="gap-1.5 text-white"
+                            className="gap-1.5 text-white hover:bg-[#252A30]"
                         >
                             <Minimize2 className="w-3.5 h-3.5" />
                             <span>Kembali ke Grid</span>
@@ -115,123 +323,7 @@ export const CameraExplorer: React.FC<CameraExplorerProps> = ({
 
             {/* Grid Area */}
             <div className="flex-1 overflow-auto p-3">
-                {focusedCamera ? (
-                    {/* Focused View - Single Camera Full Size */}
-                    <div className="h-full flex items-center justify-center animate-in fade-in zoom-in-95 duration-150">
-                        <div className="w-full max-w-4xl aspect-video">
-                            <CameraPlayer
-                                camera={focusedCamera}
-                                sessionUrl={activeSessions[focusedCamera.id]?.url || '/playback/stream/placeholder'}
-                                protocol={activeSessions[focusedCamera.id]?.protocol || 'webrtc'}
-                                onClose={handleReleaseFocus}
-                                onRetry={() => handleRetry(focusedCamera)}
-                                onFullscreen={() => {}}
-                                isFocused={true}
-                            />
-                        </div>
-                    </div>
-                ) : (
-                    {/* Mosaic Grid */}
-                    <div
-                        className={`grid ${gridCols} gap-3 h-full`}
-                        role="list"
-                        aria-label="Mosaic kamera"
-                    >
-                        {displayedCameras.map((camera) => {
-                            const session = activeSessions[camera.id];
-                            const isStreaming = !!session;
-
-                            return (
-                                <article
-                                    key={camera.id}
-                                    className="relative bg-[#15191D] rounded-[var(--radius-card)] overflow-hidden group"
-                                    role="listitem"
-                                >
-                                    {/* Camera Card */}
-                                    <div className="aspect-video relative">
-                                        {!isStreaming ? (
-                                            <div className="w-full h-full flex flex-col items-center justify-center text-[#A0AAB5] p-3">
-                                                <Video className="w-10 h-10 text-[#E60012]/50 mb-2" />
-                                                <p className="text-xs font-semibold text-white text-center mb-0.5">{camera.name}</p>
-                                                <StatusBadge status={camera.status} />
-                                                <p className="text-[10px] mt-1 text-center">Klik untuk memulai stream</p>
-                                            </div>
-                                        ) : (
-                                            <CameraPlayer
-                                                camera={camera}
-                                                sessionUrl={session.url}
-                                                protocol={session.protocol}
-                                                onClose={() => {}}
-                                                onRetry={() => handleRetry(camera)}
-                                                onFullscreen={() => handleFocus(camera)}
-                                                isFocused={false}
-                                            />
-                                        )}
-
-                                        {/* Camera Label Overlay (when not playing) */}
-                                        {!isStreaming && (
-                                            <div className="absolute inset-0 flex flex-col items-center justify-end p-2 pointer-events-none bg-gradient-to-t from-black/80 to-transparent">
-                                                <p className="text-white font-medium text-xs text-center w-full truncate">{camera.name}</p>
-                                            </div>
-                                        )}
-
-                                        {/* Play Indicator */}
-                                        {isStreaming && !focusedCamera && (
-                                            <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/60 text-white text-[10px] font-mono px-1.5 py-0.5 rounded">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-[#16834A] animate-pulse" />
-                                                LIVE
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Action Footer */}
-                                    <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/90 to-transparent flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                                        {!isStreaming ? (
-                                            <Button
-                                                variant="default"
-                                                size="sm"
-                                                onClick={(e) => { e.stopPropagation(); startSession(camera); }}
-                                                className="gap-1.5 flex-1 justify-center"
-                                            >
-                                                <Loader2 className="w-3.5 h-3.5" />
-                                                <span>Mulai Stream</span>
-                                            </Button>
-                                        ) : (
-                                            <>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={(e) => { e.stopPropagation(); handleFocus(camera); }}
-                                                    className="gap-1.5 text-white"
-                                                >
-                                                    <Maximize2 className="w-3.5 h-3.5" />
-                                                    <span className="hidden sm:inline">Fokus</span>
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={(e) => { e.stopPropagation(); handleRetry(camera); }}
-                                                    className="gap-1.5 text-white"
-                                                >
-                                                    <RotateCcw className="w-3.5 h-3.5" />
-                                                    <span className="hidden sm:inline">Refresh</span>
-                                                </Button>
-                                            </>
-                                        )}
-                                    </div>
-                                </article>
-                            );
-                        })}
-
-                        {/* Empty Slots for incomplete grids */}
-                        {displayedCameras.length < gridSize && Array.from({ length: gridSize - displayedCameras.length }).map((_, idx) => (
-                            <div
-                                key={`empty-${idx}`}
-                                className="bg-[#15191D] rounded-[var(--radius-card)] border border-dashed border-[#252A30]"
-                            />
-                        ))}
-                    </div>
-                )}
+                {renderGridArea()}
             </div>
         </div>
     );

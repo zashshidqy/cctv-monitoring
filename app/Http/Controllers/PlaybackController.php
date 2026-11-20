@@ -22,7 +22,7 @@ class PlaybackController extends Controller
     {
         $validated = $request->validate([
             'camera_id' => ['required', 'exists:cameras,id'],
-            'protocol' => ['nullable', 'in:webrtc,hls,mjpeg'],
+            'protocol' => ['nullable', 'in:webrtc,hls,mjpeg,youtube_live'],
         ]);
 
         $camera = Camera::findOrFail($validated['camera_id']);

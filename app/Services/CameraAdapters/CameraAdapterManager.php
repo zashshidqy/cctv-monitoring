@@ -20,6 +20,8 @@ class CameraAdapterManager
             'webrtc' => new WebRtcSourceAdapter,
             'snapshot' => new SnapshotSourceAdapter,
             'mjpeg' => new SnapshotSourceAdapter,
+            'youtube_live' => new YouTubeLiveSourceAdapter,
+            'youtube' => new YouTubeLiveSourceAdapter,
         ];
     }
 

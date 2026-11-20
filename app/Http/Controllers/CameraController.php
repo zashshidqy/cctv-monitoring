@@ -95,7 +95,7 @@ class CameraController extends Controller
             'area_label' => ['required', 'string', 'max:100'],
             'channel_number' => ['nullable', 'integer', 'min:1', 'max:256'],
             'device_type' => ['required', 'in:ip_camera,nvr_channel,dvr_channel,other'],
-            'connection_type' => ['required', 'in:onvif,rtsp,hls,webrtc,mjpeg,snapshot,vendor,custom'],
+            'connection_type' => ['required', 'in:onvif,rtsp,hls,webrtc,mjpeg,snapshot,vendor,custom,youtube_live'],
             'status' => ['required', Rule::enum(CameraStatus::class)],
             // Source configuration fields
             'source_config' => ['required', 'array'],
@@ -151,7 +151,7 @@ class CameraController extends Controller
             'area_label' => ['required', 'string', 'max:100'],
             'channel_number' => ['nullable', 'integer', 'min:1', 'max:256'],
             'device_type' => ['required', 'in:ip_camera,nvr_channel,dvr_channel,other'],
-            'connection_type' => ['required', 'in:onvif,rtsp,hls,webrtc,mjpeg,snapshot,vendor,custom'],
+            'connection_type' => ['required', 'in:onvif,rtsp,hls,webrtc,mjpeg,snapshot,vendor,custom,youtube_live'],
             'status' => ['required', Rule::enum(CameraStatus::class)],
             'source_config' => ['nullable', 'array'],
         ]);
