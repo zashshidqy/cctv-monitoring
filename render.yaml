@@ -1,0 +1,109 @@
+# Render Blueprint for O!Save Monitor Staging
+# This file defines the infrastructure as code for Render deployment
+# Connect this repository to Render and it will auto-detect this file
+
+services:
+  # Web Service (Laravel Application)
+  - type: web
+    name: osave-monitor-staging
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter  # Adjust based on needs: starter, standard, pro
+    region: singapore  # Or oregon, frankfurt, etc.
+    branch: main
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: APP_NAME
+        value: O!Save Monitor
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_URL
+        fromService:
+          type: web
+          name: osave-monitor-staging
+          property: host
+      - key: LOG_CHANNEL
+        value: stack
+      - key: LOG_LEVEL
+        value: error
+      - key: DB_CONNECTION
+        value: mysql
+      - key: DB_HOST
+        fromDatabase:
+          name: osave-monitor-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: osave-monitor-db
+          property: port
+      - key: DB_DATABASE
+        fromDatabase:
+          name: osave-monitor-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: osave-monitor-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: osave-monitor-db
+          property: password
+      - key: SESSION_DRIVER
+        value: database
+      - key: SESSION_LIFETIME
+        value: "120"
+      - key: SESSION_ENCRYPT
+        value: "true"
+      - key: SESSION_SECURE_COOKIE
+        value: "true"
+      - key: CACHE_STORE
+        value: database
+      - key: QUEUE_CONNECTION
+        value: database
+      - key: FILESYSTEM_DISK
+        value: local
+      - key: MAIL_MAILER
+        value: log
+      - key: MAP_PROVIDER
+        value: osm
+      - key: MAP_STYLE_URL
+        value: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+      - key: MAP_ATTRIBUTION
+        value: "© OpenStreetMap contributors"
+      - key: MAP_DEFAULT_LNG
+        value: "106.8456"
+      - key: MAP_DEFAULT_LAT
+        value: "-6.2088"
+      - key: MAP_DEFAULT_ZOOM
+        value: "11"
+    # Generate APP_KEY on first deploy
+    # After first deploy, copy the generated key and set it as a secret env var
+    # This is a one-time setup step documented in RENDER_DEPLOYMENT.md
+
+  # Database (MySQL)
+  - type: pserv
+    name: osave-monitor-db
+    plan: starter  # Adjust: starter, standard, pro
+    region: singapore  # Must match web service region
+    ipAllowList: []  # Empty = allow all (configure in Render dashboard for production)
+    databaseName: osave_monitor
+    user: osave_monitor
+    # password: auto-generated
+    postgresMajorVersion: ""  # Using MySQL, not PostgreSQL
+    # Note: Render currently offers PostgreSQL as managed database
+    # For MySQL, use a separate managed MySQL provider (PlanetScale, Railway, etc.)
+    # or use PostgreSQL and update DB_CONNECTION to pgsql
+
+databases:
+  # If using Render's managed PostgreSQL (recommended for Render native)
+  - name: osave-monitor-db
+    databaseName: osave_monitor
+    user: osave_monitor
+    plan: starter
+    region: singapore
+    # This will create a PostgreSQL database
+    # Update DB_CONNECTION=pgsql in web service env vars if using this

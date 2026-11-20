@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CameraAlertController;
 use App\Http\Controllers\CameraController;
@@ -8,8 +9,16 @@ use App\Http\Controllers\PlaybackController;
 use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\StoreController;
 use App\Http\Controllers\UserController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+
+// Health check endpoint (no auth, for load balancers / Render)
+Route::get('/health', function (Request $request) {
+    return response('OK', 200)
+        ->header('Content-Type', 'text/plain')
+        ->header('Cache-Control', 'no-cache, no-store, must-revalidate');
+})->name('health');
 
 // Guest routes
 Route::middleware('guest')->group(function () {

@@ -1,0 +1,64 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+storage/logs/*
+!storage/logs/.gitkeep
+
+# Cache
+bootstrap/cache/*
+!bootstrap/cache/.gitkeep
+storage/framework/cache/*
+!storage/framework/cache/.gitkeep
+storage/framework/views/*
+!storage/framework/views/.gitkeep
+storage/framework/sessions/*
+!storage/framework/sessions/.gitkeep
+
+# Testing
+phpunit.xml
+tests/
+
+# Node
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build
+public/build
+public/hot
+vite.config.ts.timestamp-*
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Documentation
+docs/
+README.md
+
+# CI/CD
+.github/
+
+# Misc
+*.md
+!docker/**/*.md
