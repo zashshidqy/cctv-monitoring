@@ -23,6 +23,7 @@ interface StoreMapProps {
 interface MarkerEntry {
     marker: maplibregl.Marker;
     element: HTMLButtonElement;
+    innerElement: HTMLSpanElement;
     store: StoreMarkerData;
     isVisible: boolean;
 }
@@ -332,26 +333,13 @@ export const StoreMap: React.FC<StoreMapProps> = ({
             const isInViewport = bounds.contains(lngLat);
 
             if (entry) {
-                // Update visibility state
-                if (entry.isVisible !== isInViewport) {
-                    entry.isVisible = isInViewport;
-                    entry.marker.setLngLat([store.longitude, store.latitude]); // Ensure position is correct
-                }
+                // Update visibility state only - position is managed by main update effect
+                entry.isVisible = isInViewport;
             } else if (isInViewport || !shouldLazyLoad) {
                 // Create marker immediately if in viewport or not lazy-loading
                 createMarker(store);
             }
         });
-
-        // Clean up markers outside viewport when lazy-loading
-        if (shouldLazyLoad) {
-            markersRef.current.forEach((entry, id) => {
-                if (!entry.isVisible && !filteredStores.some(s => s.id === id)) {
-                    entry.marker.remove();
-                    markersRef.current.delete(id);
-                }
-            });
-        }
 
         setMarkersLoaded(true);
     }, [filteredStores]);
@@ -370,21 +358,34 @@ export const StoreMap: React.FC<StoreMapProps> = ({
                 ? '#C62828'
                 : '#68727D';
 
+        // Root element - MapLibre manages transform for positioning ONLY
+        // No CSS transitions or scale animations on this element
         const el = document.createElement('button');
         el.type = 'button';
         el.setAttribute('aria-label', `${store.name} (${store.code}) — ${store.city}`);
         el.setAttribute('role', 'button');
         el.setAttribute('tabIndex', '0');
 
+        // Root: no transform animations, only positioning classes
         el.className = `
             group relative flex items-center justify-center
             w-9 h-9 rounded-full bg-white border-2 border-white
             shadow-[0_3px_10px_rgba(24,32,40,0.18)]
-            transition-transform duration-150 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#E60012]/40 cursor-pointer
-            ${isSelected ? 'ring-3 ring-[#E60012]/40 scale-110 z-20' : 'z-10'}
+            focus:outline-none focus:ring-2 focus:ring-[#E60012]/40 cursor-pointer
+            ${isSelected ? 'z-20' : 'z-10'}
         `;
 
-        el.innerHTML = `
+        // Inner wrapper - receives all transform animations (hover, selected)
+        // This element is NOT managed by MapLibre, so no transform conflicts
+        const innerEl = document.createElement('span');
+        innerEl.className = `
+            marker-content inline-flex items-center justify-center
+            w-9 h-9 rounded-full
+            transition-transform duration-150 hover:scale-110
+            ${isSelected ? 'scale-110 ring-3 ring-[#E60012]/40' : ''}
+        `;
+
+        innerEl.innerHTML = `
             <span class="w-7 h-7 rounded-full bg-[#E60012] flex items-center justify-center text-white text-[10px] font-bold tracking-tight">
                 O!
             </span>
@@ -393,6 +394,8 @@ export const StoreMap: React.FC<StoreMapProps> = ({
                 ${store.name} (${store.city || store.code})
             </span>
         `;
+
+        el.appendChild(innerEl);
 
         // Keyboard support
         el.addEventListener('keydown', (e) => {
@@ -416,7 +419,8 @@ export const StoreMap: React.FC<StoreMapProps> = ({
             .setLngLat([store.longitude, store.latitude])
             .addTo(map.current!);
 
-        markersRef.current.set(store.id, { marker, element: el, store, isVisible: true });
+        // Store reference to inner element for updates
+        markersRef.current.set(store.id, { marker, element: el, innerElement: innerEl, store, isVisible: true });
     };
 
     // ─── 5. Stable In-Place Marker Updates (Zero-Jitter & GPU-Friendly) ───────
@@ -448,17 +452,27 @@ export const StoreMap: React.FC<StoreMapProps> = ({
                     : '#68727D';
 
             if (existing) {
-                // Update position smoothly
+                // Update position smoothly - MapLibre manages root element transform
                 existing.marker.setLngLat([store.longitude, store.latitude]);
                 existing.store = store;
                 existing.isVisible = true;
 
-                // Update selected classes directly without destroying DOM
+                // Update selected state on INNER element (not root)
+                const innerEl = existing.innerElement;
+                if (innerEl) {
+                    if (isSelected) {
+                        innerEl.classList.add('scale-110', 'ring-3', 'ring-[#E60012]/40');
+                    } else {
+                        innerEl.classList.remove('scale-110', 'ring-3', 'ring-[#E60012]/40');
+                    }
+                }
+
+                // Update root z-index only (no transform)
                 if (isSelected) {
-                    existing.element.classList.add('ring-3', 'ring-[#E60012]/40', 'scale-110', 'z-20');
+                    existing.element.classList.add('z-20');
                     existing.element.classList.remove('z-10');
                 } else {
-                    existing.element.classList.remove('ring-3', 'ring-[#E60012]/40', 'scale-110', 'z-20');
+                    existing.element.classList.remove('z-20');
                     existing.element.classList.add('z-10');
                 }
 
