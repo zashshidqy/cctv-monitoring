@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { Head } from '@inertiajs/react';
 import { MonitoringLayout } from '@/layouts/monitoring-layout';
 import { StoreMap } from '@/components/map/store-map';
@@ -8,6 +8,7 @@ import { X, Video, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/badge';
 import { AlertBell } from '@/components/alert/alert-bell';
+import { SkeletonDrawer } from '@/components/ui/skeleton';
 import type { StoreMarkerData, CameraCardData } from '@/types';
 
 interface TileConfig {
@@ -117,22 +118,22 @@ export default function MonitoringIndex({ tileConfig }: MonitoringIndexProps) {
 
             {/* Camera Explorer Drawer (Right side floating panel) — Epic 1 & 3 Connected */}
             {selectedStore && isExplorerOpen && (
-                <div className="absolute top-0 right-0 h-full w-full max-w-md bg-white border-l border-[#E0E4E8] shadow-[var(--shadow-raised-lg)] z-20 flex flex-col animate-in slide-in-from-right duration-200">
+                <div className="absolute top-0 right-0 h-full w-full max-w-md bg-white dark:bg-[#1E2329] border-l border-[#E0E4E8] dark:border-[#2D3748] shadow-[var(--shadow-raised-lg)] z-20 flex flex-col animate-in slide-in-from-right duration-200" role="dialog" aria-label="Camera Explorer" aria-modal="true">
                     {/* Explorer Header */}
-                    <div className="p-4 border-b border-[#E0E4E8] flex items-center justify-between">
+                    <div className="p-4 border-b border-[#E0E4E8] dark:border-[#2D3748] flex items-center justify-between">
                         <div>
                             <div className="flex items-center gap-1.5 mb-0.5">
-                                <span className="text-[10px] font-mono font-medium text-[#68727D] uppercase">
+                                <span className="text-[10px] font-mono font-medium text-[#68727D] dark:text-[#A0AEC0] uppercase">
                                     {selectedStore.code}
                                 </span>
                                 <StatusBadge status={selectedStore.markerStatus} />
                             </div>
-                            <h2 className="text-sm font-semibold text-[#252A30] truncate max-w-[240px]">
+                            <h2 className="text-sm font-semibold text-[#252A30] dark:text-white truncate max-w-[240px]">
                                 {selectedStore.name}
                             </h2>
                             {selectedStore.city && (
-                                <p className="text-[10px] text-[#68727D] mt-0.5 flex items-center gap-1">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-[#E60012]" />
+                                <p className="text-[10px] text-[#68727D] dark:text-[#A0AEC0] mt-0.5 flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#E60012]" aria-hidden="true" />
                                     {selectedStore.city}
                                 </p>
                             )}
@@ -142,28 +143,25 @@ export default function MonitoringIndex({ tileConfig }: MonitoringIndexProps) {
                             type="button"
                             onClick={() => setIsExplorerOpen(false)}
                             aria-label="Tutup panel explorer"
-                            className="p-1.5 rounded-md text-[#68727D] hover:text-[#252A30] hover:bg-[#EEF0F2] transition-colors"
+                            className="p-1.5 rounded-md text-[#68727D] dark:text-[#A0AEC0] hover:text-[#252A30] dark:hover:text-white hover:bg-[#EEF0F2] dark:hover:bg-[#2D3748] transition-colors"
                         >
-                            <X className="w-4 h-4" />
+                            <X className="w-4 h-4" aria-hidden="true" />
                         </button>
                     </div>
 
                     {/* Explorer Body — Real Camera Explorer */}
                     <div className="flex-1 overflow-hidden">
-                        {camerasLoading ? (
-                            <div className="h-full flex items-center justify-center">
-                                <div className="w-8 h-8 border-2 border-[#E60012] border-t-transparent rounded-full animate-spin" />
-                            </div>
-                        ) : (
+                        <Suspense fallback={<SkeletonDrawer />}>
                             <CameraExplorer
                                 cameras={storeCameras}
+                                isLoading={camerasLoading}
                                 onCameraSelect={(camera) => console.log('Camera selected:', camera)}
                             />
-                        )}
+                        </Suspense>
                     </div>
 
                     {/* Explorer Footer */}
-                    <div className="p-3 border-t border-[#E0E4E8] bg-[#F4F5F6] flex justify-between items-center text-[11px] text-[#68727D]">
+                    <div className="p-3 border-t border-[#E0E4E8] dark:border-[#2D3748] bg-[#F4F5F6] dark:bg-[#15191D] flex justify-between items-center text-[11px] text-[#68727D] dark:text-[#A0AEC0]">
                         <span>
                             {storeCameras.length === 0 ? 'Belum ada kamera terdaftar' : `${storeCameras.length} kamera tersedia`}
                         </span>
@@ -171,6 +169,7 @@ export default function MonitoringIndex({ tileConfig }: MonitoringIndexProps) {
                             variant="outline"
                             size="sm"
                             onClick={() => setIsExplorerOpen(false)}
+                            aria-label="Tutup Camera Explorer"
                         >
                             Tutup
                         </Button>

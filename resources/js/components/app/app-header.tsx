@@ -3,6 +3,7 @@ import { Link, usePage } from '@inertiajs/react';
 import { BrandMark } from './brand-mark';
 import { ShieldCheck, LogOut, Search } from 'lucide-react';
 import { AlertBell } from '@/components/alert/alert-bell';
+import { ThemeToggle } from './theme-toggle';
 import type { SharedProps } from '@/types';
 
 interface AppHeaderProps {
@@ -89,6 +90,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                         onNavigateToStore={handleNavigateToStore}
                         onNavigateToAlertsPage={handleNavigateToAlertsPage}
                     />
+                )}
+
+                {/* Theme Toggle */}
+                {user && (
+                    <ThemeToggle />
                 )}
 
                 {/* User Info & Logout */}
