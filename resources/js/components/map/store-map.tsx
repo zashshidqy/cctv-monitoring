@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import * as maplibregl from 'maplibre-gl';
-import { RotateCcw, Search, MapPin, CheckCircle, AlertTriangle, XCircle, SlidersHorizontal } from 'lucide-react';
+import { RotateCcw, Search, MapPin, CheckCircle, AlertTriangle, XCircle, SlidersHorizontal, Building2 } from 'lucide-react';
 import type { StoreMarkerData } from '@/types';
 
 interface TileConfig {
@@ -19,6 +19,12 @@ interface StoreMapProps {
     searchQuery?: string;
 }
 
+interface MarkerEntry {
+    marker: maplibregl.Marker;
+    element: HTMLButtonElement;
+    store: StoreMarkerData;
+}
+
 export const StoreMap: React.FC<StoreMapProps> = ({
     tileConfig,
     onStoreSelect,
@@ -31,10 +37,10 @@ export const StoreMap: React.FC<StoreMapProps> = ({
     const [isTiltEnabled, setIsTiltEnabled] = useState(false);
     const [stores, setStores] = useState<StoreMarkerData[]>([]);
     const [statusFilter, setStatusFilter] = useState<'all' | 'online' | 'partial' | 'offline'>('all');
-    const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
-    const markersRef = useRef<Map<number, maplibregl.Marker>>(new Map());
+    const [isSearchingAjax, setIsSearchingAjax] = useState(false);
+    const markersRef = useRef<Map<number, MarkerEntry>>(new Map());
 
-    // ─── 1. Initialize Map ───────────────────────────────────────────────────
+    // ─── 1. Initialize Map with Zoom Clamping & Safe Error Handling ───────────
     useEffect(() => {
         if (!mapContainer.current || map.current) return;
 
@@ -65,14 +71,24 @@ export const StoreMap: React.FC<StoreMapProps> = ({
             mapStyle = tileConfig.styleUrl || 'https://demotiles.maplibre.org/style.json';
         }
 
+        const maxPitchAllowed = Math.min(tileConfig.maxPitch || 20, 20);
+
         const mapInstance = new maplibregl.Map({
             container: mapContainer.current,
             style: mapStyle,
             center: tileConfig.defaultCenter,
             zoom: tileConfig.defaultZoom,
+            minZoom: 3,
+            maxZoom: 18,
             pitch: 0,
-            maxPitch: tileConfig.maxPitch,
+            maxPitch: maxPitchAllowed,
             attributionControl: false,
+        });
+
+        // Suppress tile load 404s from crashing canvas
+        mapInstance.on('error', (e) => {
+            if (e?.error?.message?.includes('404')) return;
+            console.warn('MapLibre non-fatal notice:', e?.error?.message || e);
         });
 
         mapInstance.addControl(
@@ -83,17 +99,77 @@ export const StoreMap: React.FC<StoreMapProps> = ({
         mapInstance.on('load', () => {
             map.current = mapInstance;
             setIsLoaded(true);
+
+            // Add 3D Extrusion layer if vector source with buildings is available
+            const style = mapInstance.getStyle();
+            if (style && style.sources) {
+                const vectorSourceKey = Object.keys(style.sources).find(
+                    (k) => style.sources[k].type === 'vector'
+                );
+
+                if (vectorSourceKey && !mapInstance.getLayer('3d-buildings')) {
+                    const layers = style.layers || [];
+                    let labelLayerId: string | undefined;
+                    for (const layer of layers) {
+                        if (layer.type === 'symbol' && layer.layout && (layer.layout as any)['text-field']) {
+                            labelLayerId = layer.id;
+                            break;
+                        }
+                    }
+
+                    try {
+                        mapInstance.addLayer(
+                            {
+                                id: '3d-buildings',
+                                source: vectorSourceKey,
+                                'source-layer': 'building',
+                                filter: ['==', 'extrude', 'true'],
+                                type: 'fill-extrusion',
+                                minzoom: 14,
+                                layout: {
+                                    visibility: 'none',
+                                },
+                                paint: {
+                                    'fill-extrusion-color': '#D1D5DB',
+                                    'fill-extrusion-height': [
+                                        'interpolate',
+                                        ['linear'],
+                                        ['zoom'],
+                                        14,
+                                        0,
+                                        15.05,
+                                        ['get', 'height'],
+                                    ],
+                                    'fill-extrusion-base': [
+                                        'interpolate',
+                                        ['linear'],
+                                        ['zoom'],
+                                        14,
+                                        0,
+                                        15.05,
+                                        ['get', 'min_height'],
+                                    ],
+                                    'fill-extrusion-opacity': 0.65,
+                                },
+                            },
+                            labelLayerId
+                        );
+                    } catch {
+                        // Optional vector layer enhancement
+                    }
+                }
+            }
         });
 
-        // Smooth pitch adjustment based on zoom if tilt is enabled
+        // Smooth pitch adjustment based on zoom level when tilt is enabled
         mapInstance.on('zoom', () => {
             const z = mapInstance.getZoom();
             if (isTiltEnabled) {
                 let targetPitch = 0;
-                if (z >= 14) targetPitch = Math.min(tileConfig.maxPitch, 15);
-                else if (z >= 10) targetPitch = ((z - 10) / 4) * 10;
+                if (z >= 14) targetPitch = Math.min(maxPitchAllowed, 18);
+                else if (z >= 10) targetPitch = ((z - 10) / 4) * 12;
 
-                mapInstance.easeTo({ pitch: targetPitch, duration: 200 });
+                mapInstance.easeTo({ pitch: targetPitch, duration: 150 });
             }
         });
 
@@ -103,18 +179,21 @@ export const StoreMap: React.FC<StoreMapProps> = ({
         };
     }, []);
 
-    // ─── 2. Fetch Authorized Stores ──────────────────────────────────────────
+    // ─── 2. Fetch Initial Authorized Stores (GeoJSON) ─────────────────────────
     useEffect(() => {
         if (!isLoaded) return;
 
         fetch('/monitoring/stores/geojson')
             .then((res) => res.json())
             .then((data) => {
-                if (data.type === 'FeatureCollection') {
+                if (data.type === 'FeatureCollection' && Array.isArray(data.features)) {
                     const parsedStores: StoreMarkerData[] = data.features.map((f: any) => ({
                         id: f.properties.id,
                         code: f.properties.code,
                         name: f.properties.name,
+                        city: f.properties.city || '',
+                        region: f.properties.region || '',
+                        address: f.properties.address || '',
                         latitude: f.geometry.coordinates[1],
                         longitude: f.geometry.coordinates[0],
                         markerStatus: f.properties.markerStatus,
@@ -130,35 +209,100 @@ export const StoreMap: React.FC<StoreMapProps> = ({
             .catch((err) => console.error('Gagal memuat GeoJSON store:', err));
     }, [isLoaded]);
 
-    // ─── 3. Filtered Stores ──────────────────────────────────────────────────
+    // ─── 3. AJAX Debounced Search (Kota, Nama, Kode, Alamat) ──────────────────
+    useEffect(() => {
+        if (!isLoaded || !searchQuery.trim()) return;
+
+        setIsSearchingAjax(true);
+        const controller = new AbortController();
+
+        const timer = setTimeout(() => {
+            fetch(`/monitoring/stores/geojson?search=${encodeURIComponent(searchQuery.trim())}`, {
+                signal: controller.signal,
+            })
+                .then((res) => res.json())
+                .then((data) => {
+                    if (data.type === 'FeatureCollection' && Array.isArray(data.features)) {
+                        const fetchedStores: StoreMarkerData[] = data.features.map((f: any) => ({
+                            id: f.properties.id,
+                            code: f.properties.code,
+                            name: f.properties.name,
+                            city: f.properties.city || '',
+                            region: f.properties.region || '',
+                            address: f.properties.address || '',
+                            latitude: f.geometry.coordinates[1],
+                            longitude: f.geometry.coordinates[0],
+                            markerStatus: f.properties.markerStatus,
+                            cameraTotal: f.properties.cameraTotal,
+                            cameraOnline: f.properties.cameraOnline,
+                            cameraUnstable: f.properties.cameraUnstable,
+                            cameraOffline: f.properties.cameraOffline,
+                            cameraUnknown: f.properties.cameraUnknown,
+                        }));
+
+                        setStores((prev) => {
+                            const mapById = new Map<number, StoreMarkerData>();
+                            prev.forEach((s) => mapById.set(s.id, s));
+                            fetchedStores.forEach((s) => mapById.set(s.id, s));
+                            return Array.from(mapById.values());
+                        });
+                    }
+                })
+                .catch((err) => {
+                    if (err.name !== 'AbortError') {
+                        console.error('AJAX search error:', err);
+                    }
+                })
+                .finally(() => {
+                    setIsSearchingAjax(false);
+                });
+        }, 300);
+
+        return () => {
+            clearTimeout(timer);
+            controller.abort();
+            setIsSearchingAjax(false);
+        };
+    }, [searchQuery, isLoaded]);
+
+    // ─── 4. Filtered Stores (Multi-field Client Match + Instant Fallback) ─────
     const filteredStores = useMemo(() => {
+        const query = searchQuery.trim().toLowerCase();
+
         return stores.filter((s) => {
             const matchesStatus =
                 statusFilter === 'all' ? true : s.markerStatus === statusFilter;
-            const matchesSearch = searchQuery.trim()
-                ? s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  s.code.toLowerCase().includes(searchQuery.toLowerCase())
-                : true;
+
+            const matchesSearch = !query ||
+                s.name.toLowerCase().includes(query) ||
+                s.code.toLowerCase().includes(query) ||
+                (s.city && s.city.toLowerCase().includes(query)) ||
+                (s.region && s.region.toLowerCase().includes(query)) ||
+                (s.address && s.address.toLowerCase().includes(query));
+
             return matchesStatus && matchesSearch;
         });
     }, [stores, statusFilter, searchQuery]);
 
-    // ─── 4. Render HTML Store Markers with Status Color Rings ────────────────
+    // ─── 5. Stable In-Place Marker Updates (Zero-Jitter & GPU-Friendly) ───────
     useEffect(() => {
         if (!map.current || !isLoaded) return;
 
-        // Clear existing markers
-        markersRef.current.forEach((marker) => marker.remove());
-        markersRef.current.clear();
+        const currentActiveIds = new Set(filteredStores.map((s) => s.id));
 
+        // 5a. Remove only markers that are no longer in filteredStores
+        markersRef.current.forEach((entry, id) => {
+            if (!currentActiveIds.has(id)) {
+                entry.marker.remove();
+                markersRef.current.delete(id);
+            }
+        });
+
+        // 5b. Update or Create markers in-place
         filteredStores.forEach((store) => {
-            const el = document.createElement('button');
-            el.type = 'button';
-            el.setAttribute('aria-label', `${store.name} (${store.code})`);
-
             const isSelected = selectedStoreId === store.id;
+            const existing = markersRef.current.get(store.id);
 
-            // Status dot color mapping
             const statusColor =
                 store.markerStatus === 'online'
                     ? '#16834A'
@@ -168,67 +312,103 @@ export const StoreMap: React.FC<StoreMapProps> = ({
                     ? '#C62828'
                     : '#68727D';
 
-            el.className = `
-                group relative flex items-center justify-center
-                w-9 h-9 rounded-full bg-white border-2 border-white
-                shadow-[0_3px_10px_rgba(24,32,40,0.18)]
-                transition-transform duration-150 hover:scale-110 focus:outline-none cursor-pointer
-                ${isSelected ? 'ring-3 ring-[#E60012]/40 scale-110 z-20' : 'z-10'}
-            `;
+            if (existing) {
+                // Update position smoothly
+                existing.marker.setLngLat([store.longitude, store.latitude]);
+                existing.store = store;
 
-            el.innerHTML = `
-                <span class="w-7 h-7 rounded-full bg-[#E60012] flex items-center justify-center text-white text-[10px] font-bold tracking-tight">
-                    O!
-                </span>
-                <span class="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white" style="background-color: ${statusColor};"></span>
-                <span class="absolute -bottom-6 left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap bg-[#252A30] text-white text-[10px] font-medium px-2 py-0.5 rounded shadow-md pointer-events-none z-30">
-                    ${store.name}
-                </span>
-            `;
+                // Update selected classes directly without destroying DOM
+                if (isSelected) {
+                    existing.element.classList.add('ring-3', 'ring-[#E60012]/40', 'scale-110', 'z-20');
+                    existing.element.classList.remove('z-10');
+                } else {
+                    existing.element.classList.remove('ring-3', 'ring-[#E60012]/40', 'scale-110', 'z-20');
+                    existing.element.classList.add('z-10');
+                }
 
-            el.addEventListener('click', () => {
-                onStoreSelect?.(store);
-                map.current?.flyTo({
-                    center: [store.longitude, store.latitude],
-                    zoom: 14,
-                    pitch: isTiltEnabled ? 15 : 0,
-                    duration: 800,
+                // Update status dot color if it changed
+                const dot = existing.element.querySelector('.status-dot') as HTMLElement | null;
+                if (dot) {
+                    dot.style.backgroundColor = statusColor;
+                }
+            } else {
+                // Create new marker instance
+                const el = document.createElement('button');
+                el.type = 'button';
+                el.setAttribute('aria-label', `${store.name} (${store.code}) — ${store.city}`);
+
+                el.className = `
+                    group relative flex items-center justify-center
+                    w-9 h-9 rounded-full bg-white border-2 border-white
+                    shadow-[0_3px_10px_rgba(24,32,40,0.18)]
+                    transition-transform duration-150 hover:scale-110 focus:outline-none cursor-pointer
+                    ${isSelected ? 'ring-3 ring-[#E60012]/40 scale-110 z-20' : 'z-10'}
+                `;
+
+                el.innerHTML = `
+                    <span class="w-7 h-7 rounded-full bg-[#E60012] flex items-center justify-center text-white text-[10px] font-bold tracking-tight">
+                        O!
+                    </span>
+                    <span class="status-dot absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white" style="background-color: ${statusColor};"></span>
+                    <span class="absolute -bottom-6 left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap bg-[#252A30] text-white text-[10px] font-medium px-2 py-0.5 rounded shadow-md pointer-events-none z-30">
+                        ${store.name} (${store.city || store.code})
+                    </span>
+                `;
+
+                el.addEventListener('click', () => {
+                    onStoreSelect?.(store);
+                    map.current?.flyTo({
+                        center: [store.longitude, store.latitude],
+                        zoom: 14,
+                        pitch: isTiltEnabled ? 15 : 0,
+                        duration: 800,
+                    });
                 });
-            });
 
-            const marker = new maplibregl.Marker({ element: el })
-                .setLngLat([store.longitude, store.latitude])
-                .addTo(map.current!);
+                const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+                    .setLngLat([store.longitude, store.latitude])
+                    .addTo(map.current!);
 
-            markersRef.current.set(store.id, marker);
+                markersRef.current.set(store.id, { marker, element: el, store });
+            }
         });
     }, [filteredStores, isLoaded, selectedStoreId, isTiltEnabled]);
 
-    // ─── 5. Fly To Specific Store ────────────────────────────────────────────
+    // ─── 6. Fly To Specific Store ────────────────────────────────────────────
     const flyToStore = (store: StoreMarkerData) => {
         onStoreSelect?.(store);
-        setIsSearchDropdownOpen(false);
         map.current?.flyTo({
             center: [store.longitude, store.latitude],
             zoom: 15,
-            pitch: isTiltEnabled ? 15 : 0,
+            pitch: isTiltEnabled ? 18 : 0,
             duration: 900,
         });
     };
 
-    // ─── 6. Toggle 2D / Tilt View ─────────────────────────────────────────────
+    // ─── 7. Toggle 2D / 3D Tilt View & 3D Building Layer ─────────────────────
     const toggleTilt = () => {
         if (!map.current) return;
         const newTilt = !isTiltEnabled;
         setIsTiltEnabled(newTilt);
 
+        const targetPitch = newTilt ? Math.min(tileConfig.maxPitch || 20, 18) : 0;
+
         map.current.easeTo({
-            pitch: newTilt ? Math.min(tileConfig.maxPitch, 15) : 0,
-            duration: 400,
+            pitch: targetPitch,
+            duration: 500,
         });
+
+        // Toggle 3D extrusion building visibility if layer is present
+        if (map.current.getLayer('3d-buildings')) {
+            map.current.setLayoutProperty(
+                '3d-buildings',
+                'visibility',
+                newTilt ? 'visible' : 'none'
+            );
+        }
     };
 
-    // ─── 7. Reset View ────────────────────────────────────────────────────────
+    // ─── 8. Reset View ────────────────────────────────────────────────────────
     const resetView = () => {
         if (!map.current) return;
         map.current.easeTo({
@@ -239,6 +419,10 @@ export const StoreMap: React.FC<StoreMapProps> = ({
             duration: 600,
         });
         setIsTiltEnabled(false);
+
+        if (map.current.getLayer('3d-buildings')) {
+            map.current.setLayoutProperty('3d-buildings', 'visibility', 'none');
+        }
     };
 
     return (
@@ -298,52 +482,81 @@ export const StoreMap: React.FC<StoreMapProps> = ({
             </div>
 
             {/* Search Dropdown Indicator if Query entered */}
-            {searchQuery.trim().length > 0 && filteredStores.length > 0 && (
-                <div className="absolute top-16 left-4 z-20 w-72 bg-white border border-[#E0E4E8] rounded-[var(--radius-panel)] shadow-[var(--shadow-raised-lg)] max-h-60 overflow-y-auto p-1.5 animate-in fade-in slide-in-from-top-1 duration-150">
-                    <p className="px-2.5 py-1 text-[10px] uppercase font-semibold text-[#68727D] tracking-wider">
-                        Hasil Pencarian ({filteredStores.length})
-                    </p>
-                    <div className="space-y-0.5">
-                        {filteredStores.map((s) => (
-                            <button
-                                key={s.id}
-                                type="button"
-                                onClick={() => flyToStore(s)}
-                                className="w-full text-left px-2.5 py-2 rounded-[var(--radius-control)] hover:bg-[#EEF0F2] flex items-center justify-between transition-colors"
-                            >
-                                <div>
-                                    <p className="text-xs font-semibold text-[#252A30] leading-none">
-                                        {s.name}
-                                    </p>
-                                    <p className="text-[10px] text-[#68727D] mt-1 font-mono">{s.code}</p>
-                                </div>
-                                <span
-                                    className="w-2 h-2 rounded-full shrink-0 ml-2"
-                                    style={{
-                                        backgroundColor:
-                                            s.markerStatus === 'online'
-                                                ? '#16834A'
-                                                : s.markerStatus === 'partial'
-                                                ? '#B7791F'
-                                                : '#C62828',
-                                    }}
-                                />
-                            </button>
-                        ))}
+            {searchQuery.trim().length > 0 && (
+                <div className="absolute top-16 left-4 z-20 w-80 bg-white border border-[#E0E4E8] rounded-[var(--radius-panel)] shadow-[var(--shadow-raised-lg)] max-h-72 overflow-y-auto p-1.5 animate-in fade-in slide-in-from-top-1 duration-150">
+                    <div className="px-2.5 py-1.5 flex items-center justify-between border-b border-[#E0E4E8] mb-1">
+                        <p className="text-[10px] uppercase font-semibold text-[#68727D] tracking-wider">
+                            Hasil Pencarian ({filteredStores.length})
+                        </p>
+                        {isSearchingAjax && (
+                            <span className="text-[10px] text-[#E60012] animate-pulse">Mencari...</span>
+                        )}
                     </div>
+
+                    {filteredStores.length === 0 ? (
+                        <div className="p-4 text-center text-[#68727D]">
+                            <p className="text-xs">Tidak ditemukan toko untuk &quot;{searchQuery}&quot;</p>
+                            <p className="text-[10px] text-[#A0AEC0] mt-1">Coba cari dengan nama toko, kota (contoh: Kemang, Dago, Bandung), atau kode store.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-0.5">
+                            {filteredStores.map((s) => (
+                                <button
+                                    key={s.id}
+                                    type="button"
+                                    onClick={() => flyToStore(s)}
+                                    className="w-full text-left px-2.5 py-2 rounded-[var(--radius-control)] hover:bg-[#EEF0F2] flex items-center justify-between transition-colors group"
+                                >
+                                    <div className="flex-1 pr-2">
+                                        <div className="flex items-center gap-1.5">
+                                            <p className="text-xs font-semibold text-[#252A30] group-hover:text-[#E60012] transition-colors leading-tight">
+                                                {s.name}
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-2 mt-0.5 text-[10px] text-[#68727D]">
+                                            <span className="font-mono bg-[#EEF0F2] px-1 py-0.2 rounded">{s.code}</span>
+                                            {s.city && (
+                                                <span className="flex items-center gap-0.5">
+                                                    <MapPin className="w-2.5 h-2.5 text-[#A0AEC0]" />
+                                                    {s.city}
+                                                </span>
+                                            )}
+                                        </div>
+                                        {s.address && (
+                                            <p className="text-[10px] text-[#8C9BA5] truncate max-w-[220px] mt-0.5">
+                                                {s.address}
+                                            </p>
+                                        )}
+                                    </div>
+                                    <span
+                                        className="w-2 h-2 rounded-full shrink-0 ml-1"
+                                        title={`Status: ${s.markerStatus}`}
+                                        style={{
+                                            backgroundColor:
+                                                s.markerStatus === 'online'
+                                                    ? '#16834A'
+                                                    : s.markerStatus === 'partial'
+                                                    ? '#B7791F'
+                                                    : '#C62828',
+                                        }}
+                                    />
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
 
             {/* Floating Map Controls — Top Right */}
             <div className="absolute top-4 right-4 flex flex-col gap-1.5 z-10">
-                {/* 2D / Tilt Toggle */}
+                {/* 2D / 3D Tilt Toggle */}
                 <button
                     type="button"
                     onClick={toggleTilt}
-                    title={isTiltEnabled ? 'Kembali ke tampilan 2D' : 'Aktifkan sudut semi-3D (maks 15-20°)'}
+                    title={isTiltEnabled ? 'Kembali ke tampilan datar 2D' : 'Aktifkan sudut perspektif 3D'}
                     className={`
                         w-9 h-9 rounded-[var(--radius-control)] bg-white border border-[#E0E4E8]
-                        flex items-center justify-center text-xs font-semibold
+                        flex items-center justify-center text-xs font-bold
                         shadow-[var(--shadow-raised)] transition-colors
                         ${isTiltEnabled ? 'bg-[#FCE8EA] text-[#E60012] border-[#E60012]/30' : 'text-[#252A30] hover:bg-[#EEF0F2]'}
                     `}
@@ -355,7 +568,7 @@ export const StoreMap: React.FC<StoreMapProps> = ({
                 <button
                     type="button"
                     onClick={resetView}
-                    title="Reset tampilan peta"
+                    title="Reset tampilan peta ke default"
                     className="w-9 h-9 rounded-[var(--radius-control)] bg-white border border-[#E0E4E8] flex items-center justify-center text-[#68727D] hover:text-[#252A30] hover:bg-[#EEF0F2] shadow-[var(--shadow-raised)] transition-colors"
                 >
                     <RotateCcw className="w-4 h-4" />

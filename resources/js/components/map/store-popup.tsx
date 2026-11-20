@@ -34,6 +34,11 @@ export const StorePopup: React.FC<StorePopupProps> = ({
                     <h3 className="text-sm font-semibold text-[#252A30] leading-snug">
                         {store.name}
                     </h3>
+                    {store.city && (
+                        <p className="text-[11px] text-[#68727D] mt-0.5 truncate max-w-[200px]" title={`${store.city}${store.address ? ' — ' + store.address : ''}`}>
+                            {store.city} {store.address ? `• ${store.address}` : ''}
+                        </p>
+                    )}
                 </div>
 
                 <button

@@ -64,12 +64,14 @@ class MonitoringController extends Controller
             $query->whereIn('id', $scope);
         }
 
-        // Search filter (code, name, city)
+        // Search filter (code, name, city, region, address)
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('code', 'like', "%{$search}%")
                     ->orWhere('name', 'like', "%{$search}%")
-                    ->orWhere('city', 'like', "%{$search}%");
+                    ->orWhere('city', 'like', "%{$search}%")
+                    ->orWhere('region', 'like', "%{$search}%")
+                    ->orWhere('address', 'like', "%{$search}%");
             });
         }
 
@@ -89,6 +91,7 @@ class MonitoringController extends Controller
                     'code' => $store->code,
                     'name' => $store->name,
                     'city' => $store->city,
+                    'region' => $store->region,
                     'address' => $store->address,
                     'markerStatus' => $health['markerStatus'],
                     'cameraTotal' => $health['cameraTotal'],

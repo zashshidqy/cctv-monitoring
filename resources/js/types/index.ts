@@ -43,6 +43,9 @@ export interface StoreMarkerData {
     id: number;
     code: string;
     name: string;
+    city: string;
+    region?: string;
+    address?: string;
     latitude: number;
     longitude: number;
     markerStatus: MarkerStatus;

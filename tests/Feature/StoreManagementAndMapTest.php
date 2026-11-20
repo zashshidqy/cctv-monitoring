@@ -196,4 +196,50 @@ class StoreManagementAndMapTest extends TestCase
             $this->assertSame('partial', $f['properties']['markerStatus']);
         }
     }
+
+    public function test_geojson_returns_city_region_and_address_properties(): void
+    {
+        $response = $this->actingAs($this->admin)->getJson('/monitoring/stores/geojson');
+
+        $response->assertOk();
+        $feature = $response->json('features.0');
+
+        $this->assertArrayHasKey('city', $feature['properties']);
+        $this->assertArrayHasKey('region', $feature['properties']);
+        $this->assertArrayHasKey('address', $feature['properties']);
+        $this->assertNotEmpty($feature['properties']['city']);
+    }
+
+    public function test_geojson_search_by_city_and_region(): void
+    {
+        // Search by city 'Bandung'
+        $response = $this->actingAs($this->admin)->getJson('/monitoring/stores/geojson?search=Bandung');
+        $response->assertOk();
+        $features = $response->json('features');
+        $this->assertNotEmpty($features);
+
+        foreach ($features as $f) {
+            $this->assertStringContainsStringIgnoringCase('Bandung', $f['properties']['city'].' '.$f['properties']['name'].' '.$f['properties']['address']);
+        }
+
+        // Search by region 'Jawa Barat'
+        $responseJabar = $this->actingAs($this->admin)->getJson('/monitoring/stores/geojson?search=Jawa%20Barat');
+        $responseJabar->assertOk();
+        $this->assertNotEmpty($responseJabar->json('features'));
+    }
+
+    public function test_geojson_search_respects_store_scope(): void
+    {
+        // SV is only assigned to Kemang (Jakarta)
+        // Searching for Bandung should return 0 features for SV
+        $response = $this->actingAs($this->sv)->getJson('/monitoring/stores/geojson?search=Bandung');
+
+        $response->assertOk();
+        $this->assertEmpty($response->json('features'));
+
+        // Searching for Kemang should return 1 feature
+        $responseKemang = $this->actingAs($this->sv)->getJson('/monitoring/stores/geojson?search=Kemang');
+        $responseKemang->assertOk();
+        $this->assertCount(1, $responseKemang->json('features'));
+    }
 }
