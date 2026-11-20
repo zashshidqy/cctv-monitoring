@@ -4,12 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { CameraAlert, HealthCheck } from '@/types';
 
-interface AlertDetailProps {
+export interface AlertDetailProps {
     alert: CameraAlert & {
         camera?: {
             id: number;
-            name: string;
             code: string;
+            name: string;
+            store_id: number;
             status: string;
         };
         store?: {

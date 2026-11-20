@@ -4,6 +4,7 @@ import { AlertDetail } from './alert-detail';
 import { Button } from '@/components/ui/button';
 import { Loader2, Bell, X, Filter, BellRing, CheckCircle2, AlertTriangle } from 'lucide-react';
 import type { CameraAlert, AlertSummary } from '@/types';
+import type { AlertDetailProps } from './alert-detail';
 
 interface AlertBellProps {
     userRole: 'master_admin' | 'gm' | 'sv' | 'staff';
@@ -27,7 +28,7 @@ export const AlertBell: React.FC<AlertBellProps> = ({
     const [lastFetchTime, setLastFetchTime] = useState<Date | null>(null);
     const [toast, setToast] = useState<{ message: string; type: 'info' | 'warning' | 'critical' } | null>(null);
 
-    const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const seenAlertIdsRef = useRef<Set<number>>(new Set());
 
     // Fetch alerts from API
@@ -48,15 +49,16 @@ export const AlertBell: React.FC<AlertBellProps> = ({
 
             if (res.ok) {
                 const data = await res.json();
-                setAlerts(data.alerts?.data || data.alerts || []);
+                const fetchedAlerts: CameraAlert[] = data.alerts?.data || data.alerts || [];
+                setAlerts(fetchedAlerts);
                 setSummary(data.summary || { new: 0, active: 0, resolved: 0, total: 0 });
 
                 // Check for new alerts to show toast
-                const currentAlertIds = new Set((data.alerts?.data || data.alerts || []).map((a: CameraAlert) => a.id));
-                const newAlertIds = [...currentAlertIds].filter(id => !seenAlertIdsRef.current.has(id));
+                const currentAlertIds = new Set<number>(fetchedAlerts.map((a: CameraAlert) => a.id));
+                const newAlertIds = [...currentAlertIds].filter((id: number) => !seenAlertIdsRef.current.has(id));
 
                 if (newAlertIds.length > 0 && seenAlertIdsRef.current.size > 0) {
-                    const newAlerts = (data.alerts?.data || data.alerts || []).filter((a: CameraAlert) => newAlertIds.includes(a.id));
+                    const newAlerts = fetchedAlerts.filter((a: CameraAlert) => newAlertIds.includes(a.id));
                     newAlerts.forEach((alert: CameraAlert) => {
                         showToast(alert);
                     });
@@ -313,7 +315,7 @@ export const AlertBell: React.FC<AlertBellProps> = ({
                 <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedAlertId(null)}>
                     <div className="w-full max-w-2xl max-h-[90vh] bg-white rounded-[var(--radius-panel)] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150" onClick={e => e.stopPropagation()}>
                         <AlertDetail
-                            alert={alerts.find(a => a.id === selectedAlertId)!}
+                            alert={alerts.find(a => a.id === selectedAlertId)! as AlertDetailProps['alert']}
                             onClose={() => setSelectedAlertId(null)}
                             onApprove={canApprove ? () => handleApprove(selectedAlertId!) : undefined}
                             onReject={canApprove ? () => handleReject(selectedAlertId!) : undefined}

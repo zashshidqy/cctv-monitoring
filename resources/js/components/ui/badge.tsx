@@ -21,6 +21,8 @@ const badgeVariants = cva(
                 unknown: 'bg-[var(--color-surface-muted)] text-[var(--color-muted)]',
                 /** Partial — some cameras have issues (marker level) */
                 partial: 'bg-orange-100 text-orange-700',
+                /** Outline style — for resolved/secondary states */
+                outline: 'border border-[var(--color-border)] bg-transparent text-[var(--color-foreground)]',
             },
         },
         defaultVariants: {

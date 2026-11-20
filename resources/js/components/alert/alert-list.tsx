@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { AlertTriangle, Loader2, Inbox } from 'lucide-react';
 import { AlertListItem } from './alert-list-item';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { CameraAlert as AlertType } from '@/types';
 
 interface AlertListProps {
@@ -101,7 +102,7 @@ export const AlertList: React.FC<AlertListProps> = ({
                 <div key={storeCode}>
                     <div className="flex items-center gap-2 mb-2">
                         <p className="text-xs font-semibold text-[#252A30]">{storeCode}</p>
-                        <Badge variant="secondary" className="text-[10px] bg-[#EEF0F2]">
+                        <Badge variant="default" className="text-[10px] bg-[#EEF0F2]">
                             {storeAlerts.length}
                         </Badge>
                     </div>

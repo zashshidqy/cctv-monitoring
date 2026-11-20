@@ -565,14 +565,14 @@ export const StoreMap: React.FC<StoreMapProps> = ({
             )}
 
             {/* Floating Filter Chips — Top Left */}
-            <div className="absolute top-4 left-4 z-10 flex flex-wrap items-center gap-1.5 bg-white/95 dark:bg-[#1E2329]/95 backdrop-blur-xs border border-[#E0E4E8] dark:border-[#2D3748] rounded-[var(--radius-panel)] p-1.5 shadow-[var(--shadow-raised)]">
+            <div className="absolute top-4 left-4 z-10 flex flex-wrap items-center gap-1.5 bg-white/95 backdrop-blur-xs border border-[#E0E4E8] rounded-[var(--radius-panel)] p-1.5 shadow-[var(--shadow-raised)]">
                 <button
                     type="button"
                     onClick={() => setStatusFilter('all')}
                     className={`px-2.5 py-1 rounded-[var(--radius-control)] text-xs font-medium transition-colors ${
                         statusFilter === 'all'
                             ? 'bg-[#252A30] text-white shadow-xs'
-                            : 'text-[#68727D] hover:text-[#252A30] hover:bg-[#EEF0F2] dark:hover:bg-[#2D3748]'
+                            : 'text-[#68727D] hover:text-[#252A30] hover:bg-[#EEF0F2]'
                     }`}
                     aria-pressed={statusFilter === 'all'}
                 >
@@ -584,7 +584,7 @@ export const StoreMap: React.FC<StoreMapProps> = ({
                     className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-[var(--radius-control)] text-xs font-medium transition-colors ${
                         statusFilter === 'online'
                             ? 'bg-[#16834A] text-white shadow-xs'
-                            : 'text-[#68727D] hover:text-[#16834A] hover:bg-[#dcfce7] dark:hover:bg-[#064E3B]'
+                            : 'text-[#68727D] hover:text-[#16834A] hover:bg-[#dcfce7]'
                     }`}
                     aria-pressed={statusFilter === 'online'}
                 >
@@ -597,7 +597,7 @@ export const StoreMap: React.FC<StoreMapProps> = ({
                     className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-[var(--radius-control)] text-xs font-medium transition-colors ${
                         statusFilter === 'partial'
                             ? 'bg-[#B7791F] text-white shadow-xs'
-                            : 'text-[#68727D] hover:text-[#B7791F] hover:bg-[#fef9c3] dark:hover:bg-[#744210]'
+                            : 'text-[#68727D] hover:text-[#B7791F] hover:bg-[#fef9c3]'
                     }`}
                     aria-pressed={statusFilter === 'partial'}
                 >
@@ -610,7 +610,7 @@ export const StoreMap: React.FC<StoreMapProps> = ({
                     className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-[var(--radius-control)] text-xs font-medium transition-colors ${
                         statusFilter === 'offline'
                             ? 'bg-[#C62828] text-white shadow-xs'
-                            : 'text-[#68727D] hover:text-[#C62828] hover:bg-[#fee2e2] dark:hover:bg-[#7F1D1D]'
+                            : 'text-[#68727D] hover:text-[#C62828] hover:bg-[#fee2e2]'
                     }`}
                     aria-pressed={statusFilter === 'offline'}
                 >
@@ -621,9 +621,9 @@ export const StoreMap: React.FC<StoreMapProps> = ({
 
             {/* Search Dropdown Indicator if Query entered */}
             {searchQuery.trim().length > 0 && (
-                <div className="absolute top-16 left-4 z-20 w-80 bg-white dark:bg-[#1E2329] border border-[#E0E4E8] dark:border-[#2D3748] rounded-[var(--radius-panel)] shadow-[var(--shadow-raised-lg)] max-h-72 overflow-y-auto p-1.5 animate-in fade-in slide-in-from-top-1 duration-150" role="listbox" aria-label="Hasil pencarian store">
-                    <div className="px-2.5 py-1.5 flex items-center justify-between border-b border-[#E0E4E8] dark:border-[#2D3748] mb-1">
-                        <p className="text-[10px] uppercase font-semibold text-[#68727D] dark:text-[#A0AEC0] tracking-wider">
+                <div className="absolute top-16 left-4 z-20 w-80 bg-white border border-[#E0E4E8] rounded-[var(--radius-panel)] shadow-[var(--shadow-raised-lg)] max-h-72 overflow-y-auto p-1.5 animate-in fade-in slide-in-from-top-1 duration-150" role="listbox" aria-label="Hasil pencarian store">
+                    <div className="px-2.5 py-1.5 flex items-center justify-between border-b border-[#E0E4E8] mb-1">
+                        <p className="text-[10px] uppercase font-semibold text-[#68727D] tracking-wider">
                             Hasil Pencarian ({filteredStores.length})
                         </p>
                         {isSearchingAjax && (
@@ -632,9 +632,9 @@ export const StoreMap: React.FC<StoreMapProps> = ({
                     </div>
 
                     {filteredStores.length === 0 ? (
-                        <div className="p-4 text-center text-[#68727D] dark:text-[#A0AEC0]" role="option" aria-selected="false">
+                        <div className="p-4 text-center text-[#68727D]" role="option" aria-selected="false">
                             <p className="text-xs">Tidak ditemukan toko untuk "{searchQuery}"</p>
-                            <p className="text-[10px] text-[#A0AEC0] dark:text-[#718096] mt-1">Coba cari dengan nama toko, kota (contoh: Kemang, Dago, Bandung), atau kode store.</p>
+                            <p className="text-[10px] text-[#A0AEC0] mt-1">Coba cari dengan nama toko, kota (contoh: Kemang, Dago, Bandung), atau kode store.</p>
                         </div>
                     ) : (
                         <div className="space-y-0.5">
@@ -645,25 +645,25 @@ export const StoreMap: React.FC<StoreMapProps> = ({
                                     onClick={() => flyToStore(s)}
                                     role="option"
                                     aria-selected={selectedStoreId === s.id}
-                                    className="w-full text-left px-2.5 py-2 rounded-[var(--radius-control)] hover:bg-[#EEF0F2] dark:hover:bg-[#2D3748] flex items-center justify-between transition-colors group"
+                                    className="w-full text-left px-2.5 py-2 rounded-[var(--radius-control)] hover:bg-[#EEF0F2] flex items-center justify-between transition-colors group"
                                 >
                                     <div className="flex-1 pr-2">
                                         <div className="flex items-center gap-1.5">
-                                            <p className="text-xs font-semibold text-[#252A30] dark:text-white group-hover:text-[#E60012] transition-colors leading-tight">
+                                            <p className="text-xs font-semibold text-[#252A30] group-hover:text-[#E60012] transition-colors leading-tight">
                                                 {s.name}
                                             </p>
                                         </div>
-                                        <div className="flex items-center gap-2 mt-0.5 text-[10px] text-[#68727D] dark:text-[#A0AEC0]">
-                                            <span className="font-mono bg-[#EEF0F2] dark:bg-[#2D3748] px-1 py-0.2 rounded">{s.code}</span>
+                                        <div className="flex items-center gap-2 mt-0.5 text-[10px] text-[#68727D]">
+                                            <span className="font-mono bg-[#EEF0F2] px-1 py-0.2 rounded">{s.code}</span>
                                             {s.city && (
                                                 <span className="flex items-center gap-0.5">
-                                                    <MapPin className="w-2.5 h-2.5 text-[#A0AEC0] dark:text-[#718096]" aria-hidden="true" />
+                                                    <MapPin className="w-2.5 h-2.5 text-[#A0AEC0]" aria-hidden="true" />
                                                     {s.city}
                                                 </span>
                                             )}
                                         </div>
                                         {s.address && (
-                                            <p className="text-[10px] text-[#8C9BA5] dark:text-[#718096] truncate max-w-[220px] mt-0.5">
+                                            <p className="text-[10px] text-[#8C9BA5] truncate max-w-[220px] mt-0.5">
                                                 {s.address}
                                             </p>
                                         )}
@@ -695,8 +695,8 @@ export const StoreMap: React.FC<StoreMapProps> = ({
                     type="button"
                     onClick={toggleTilt}
                     title={isTiltEnabled ? 'Kembali ke tampilan datar 2D' : 'Aktifkan sudut perspektif 3D'}
-                    className={`w-9 h-9 rounded-[var(--radius-control)] bg-white dark:bg-[#1E2329] border border-[#E0E4E8] dark:border-[#2D3748] flex items-center justify-center text-xs font-bold shadow-[var(--shadow-raised)] transition-colors ${
-                        isTiltEnabled ? 'bg-[#FCE8EA] text-[#E60012] border-[#E60012]/30 dark:bg-[#E60012]/20' : 'text-[#252A30] dark:text-white hover:bg-[#EEF0F2] dark:hover:bg-[#2D3748]'
+                    className={`w-9 h-9 rounded-[var(--radius-control)] bg-white border border-[#E0E4E8] flex items-center justify-center text-xs font-bold shadow-[var(--shadow-raised)] transition-colors ${
+                        isTiltEnabled ? 'bg-[#FCE8EA] text-[#E60012] border-[#E60012]/30' : 'text-[#252A30] hover:bg-[#EEF0F2]'
                     }`}
                     aria-pressed={isTiltEnabled}
                     aria-label={isTiltEnabled ? 'Mode 3D aktif' : 'Mode 2D aktif'}
@@ -709,7 +709,7 @@ export const StoreMap: React.FC<StoreMapProps> = ({
                     type="button"
                     onClick={resetView}
                     title="Reset tampilan peta ke default"
-                    className="w-9 h-9 rounded-[var(--radius-control)] bg-white dark:bg-[#1E2329] border border-[#E0E4E8] dark:border-[#2D3748] flex items-center justify-center text-[#68727D] dark:text-[#A0AEC0] hover:text-[#252A30] dark:hover:text-white hover:bg-[#EEF0F2] dark:hover:bg-[#2D3748] shadow-[var(--shadow-raised)] transition-colors"
+                    className="w-9 h-9 rounded-[var(--radius-control)] bg-white border border-[#E0E4E8] flex items-center justify-center text-[#68727D] hover:text-[#252A30] hover:bg-[#EEF0F2] shadow-[var(--shadow-raised)] transition-colors"
                     aria-label="Reset tampilan peta"
                 >
                     <RotateCcw className="w-4 h-4" aria-hidden="true" />
@@ -717,22 +717,22 @@ export const StoreMap: React.FC<StoreMapProps> = ({
             </div>
 
             {/* Map Status Legend — Bottom Left */}
-            <div className="absolute bottom-6 left-4 bg-white/95 dark:bg-[#1E2329]/95 backdrop-blur-xs border border-[#E0E4E8] dark:border-[#2D3748] rounded-[var(--radius-card)] p-2.5 shadow-[var(--shadow-raised)] z-10 text-[11px] select-none" role="region" aria-label="Legenda status store">
-                <p className="font-semibold text-[#252A30] dark:text-white mb-1.5 uppercase tracking-wider text-[10px]">
+            <div className="absolute bottom-6 left-4 bg-white/95 backdrop-blur-xs border border-[#E0E4E8] rounded-[var(--radius-card)] p-2.5 shadow-[var(--shadow-raised)] z-10 text-[11px] select-none" role="region" aria-label="Legenda status store">
+                <p className="font-semibold text-[#252A30] mb-1.5 uppercase tracking-wider text-[10px]">
                     Status Store
                 </p>
                 <div className="flex items-center gap-3">
                     <span className="inline-flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-[#16834A]" aria-hidden="true" />
-                        <span className="text-[#252A30] dark:text-white">Online</span>
+                        <span className="text-[#252A30]">Online</span>
                     </span>
                     <span className="inline-flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-[#B7791F]" aria-hidden="true" />
-                        <span className="text-[#252A30] dark:text-white">Sebagian</span>
+                        <span className="text-[#252A30]">Sebagian</span>
                     </span>
                     <span className="inline-flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-[#C62828]" aria-hidden="true" />
-                        <span className="text-[#252A30] dark:text-white">Offline</span>
+                        <span className="text-[#252A30]">Offline</span>
                     </span>
                 </div>
             </div>

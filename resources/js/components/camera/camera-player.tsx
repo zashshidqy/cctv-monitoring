@@ -59,10 +59,10 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({
     // Skeleton loading state
     if (state === 'connecting') {
         return (
-            <div className="relative bg-[#15191D] dark:bg-[#1A1F25] rounded-[var(--radius-card)] overflow-hidden" aria-busy="true">
+            <div className="relative bg-[#15191D] rounded-[var(--radius-card)] overflow-hidden" aria-busy="true">
                 <div className="w-full aspect-video relative">
-                    <Skeleton className="w-full h-full rounded-[var(--radius-card)] bg-[#1E2329] dark:bg-[#15191D]" />
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#15191D]/80 dark:bg-[#1A1F25]/80 text-white">
+                    <Skeleton className="w-full h-full rounded-[var(--radius-card)] bg-[#1E2329]" />
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#15191D]/80 text-white">
                         <Loader2 className="w-8 h-8 text-[#E60012] animate-spin mx-auto mb-2" aria-hidden="true" />
                         <p className="text-sm font-mono text-white/80">
                             {protocol === 'youtube_live' ? 'Menghubungkan ke YouTube Live...' : 'Menghubungkan ke gateway...'}
@@ -74,7 +74,7 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({
     }
 
     return (
-        <div className={`relative bg-[#15191D] dark:bg-[#1A1F25] rounded-[var(--radius-card)] overflow-hidden ${isFocused ? 'z-30' : ''}`}>
+        <div className={`relative bg-[#15191D] rounded-[var(--radius-card)] overflow-hidden ${isFocused ? 'z-30' : ''}`}>
             {/* Video Layer */}
             <div className="w-full aspect-video relative">
                 {protocol === 'youtube_live' ? (
@@ -103,7 +103,7 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({
                 )}
 
                 {state !== 'playing' && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#15191D] dark:bg-[#1A1F25] text-white">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#15191D] text-white">
                         {state === 'reconnecting' && (
                             <div className="space-y-2 text-center">
                                 <RotateCcw className="w-8 h-8 text-[#B7791F] animate-spin mx-auto" aria-hidden="true" />
@@ -114,21 +114,21 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({
                             <div className="space-y-2 text-center">
                                 <VideoOff className="w-10 h-10 text-[#C62828] mx-auto" aria-hidden="true" />
                                 <p className="font-semibold text-white">Kamera Offline</p>
-                                <p className="text-xs text-[#A0AAB5] dark:text-[#718096]">Tidak ada respons dari gateway</p>
+                                <p className="text-xs text-[#A0AAB5]">Tidak ada respons dari gateway</p>
                             </div>
                         )}
                         {state === 'error' && (
                             <div className="space-y-2 text-center">
                                 <AlertTriangle className="w-10 h-10 text-[#C62828] mx-auto" aria-hidden="true" />
                                 <p className="font-semibold text-white">Gagal Memuat Stream</p>
-                                <p className="text-xs text-[#A0AAB5] dark:text-[#718096]">Mungkin stream tidak aktif atau jaringan terputus</p>
+                                <p className="text-xs text-[#A0AAB5]">Mungkin stream tidak aktif atau jaringan terputus</p>
                             </div>
                         )}
                         {state === 'unsupported' && (
                             <div className="space-y-2 text-center">
                                 <AlertTriangle className="w-10 h-10 text-[#B7791F] mx-auto" aria-hidden="true" />
                                 <p className="font-semibold text-white">Format Tidak Didukung</p>
-                                <p className="text-xs text-[#A0AAB5] dark:text-[#718096]">Browser tidak mendukung protokol ini</p>
+                                <p className="text-xs text-[#A0AAB5]">Browser tidak mendukung protokol ini</p>
                             </div>
                         )}
                     </div>
@@ -141,7 +141,7 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({
                             variant="outline"
                             size="sm"
                             onClick={onRetry}
-                            className="gap-1.5 pointer-events-auto bg-white/90 dark:bg-[#1E2329]/90 text-[#252A30] dark:text-white border-[#E0E4E8] dark:border-[#2D3748]"
+                            className="gap-1.5 pointer-events-auto bg-white/90 text-[#252A30] border-[#E0E4E8]"
                         >
                             <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
                             <span>Coba Lagi</span>
@@ -161,14 +161,14 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({
                                 {state.toUpperCase()}
                             </span>
                             {latencyMs && state === 'playing' && (
-                                <span className="text-[10px] text-[#A0AAB5] dark:text-[#718096] font-mono">
+                                <span className="text-[10px] text-[#A0AAB5] font-mono">
                                     ~{latencyMs}ms
                                 </span>
                             )}
                         </div>
 
                         <div className="flex items-center gap-1">
-                            <span className="text-[10px] font-mono uppercase bg-black/60 dark:bg-white/10 text-white px-1.5 py-0.5 rounded font-semibold">
+                            <span className="text-[10px] font-mono uppercase bg-black/60 text-white px-1.5 py-0.5 rounded font-semibold">
                                 {protocol === 'youtube_live' ? 'YT LIVE' : protocol.toUpperCase()}
                             </span>
                             {isFocused ? (
@@ -201,9 +201,9 @@ export const CameraPlayer: React.FC<CameraPlayerProps> = ({
                     <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/70 to-transparent pointer-events-auto flex items-end justify-between">
                         <div>
                             <p className="text-white font-medium text-xs leading-tight">{camera.name}</p>
-                            <p className="text-[10px] text-[#A0AAB5] dark:text-[#718096]">{camera.areaLabel}</p>
+                            <p className="text-[10px] text-[#A0AAB5]">{camera.areaLabel}</p>
                         </div>
-                        <p className="text-[10px] font-mono text-[#A0AAB5] dark:text-[#718096]">
+                        <p className="text-[10px] font-mono text-[#A0AAB5]">
                             {new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                         </p>
                     </div>

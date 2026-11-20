@@ -170,11 +170,15 @@ export interface CameraAlert {
     recovered_at: string | null;
     approval_status: AlertApprovalStatus;
     approved_by_user_id: number | null;
+    /** Timestamp when alert was first fired */
+    first_fired_at: string;
     camera?: {
         id: number;
         code: string;
         name: string;
         store_id: number;
+        /** Camera status at time of alert */
+        status: string;
     };
     store?: {
         id: number;

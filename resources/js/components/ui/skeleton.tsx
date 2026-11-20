@@ -66,8 +66,13 @@ export const SkeletonCard: React.FC<{ className?: string }> = ({ className = '' 
     </div>
 );
 
-export const SkeletonMapMarker: React.FC = () => (
-    <div className="relative w-9 h-9" aria-hidden="true">
+interface SkeletonMapMarkerProps {
+    style?: React.CSSProperties;
+    className?: string;
+}
+
+export const SkeletonMapMarker: React.FC<SkeletonMapMarkerProps> = ({ style, className = '' }) => (
+    <div className={`relative w-9 h-9 ${className}`} style={style} aria-hidden="true">
         <Skeleton variant="circular" width={36} height={36} className="absolute inset-0" />
         <Skeleton variant="circular" width={12} height={12} className="absolute -top-1 -right-1 border-2 border-white" />
     </div>

@@ -76,7 +76,7 @@ export const AlertListItem: React.FC<AlertListItemProps> = ({ alert, onClick, on
                     <div className="flex gap-1.5">
                         <Button
                             variant="outline"
-                            size="xs"
+                            size="sm"
                             onClick={(e) => { e.stopPropagation(); onApprove(); }}
                             className="gap-1 text-[10px] h-6 text-[#16834A] border-[#16834A] hover:bg-[#16834A]/10"
                         >
@@ -85,7 +85,7 @@ export const AlertListItem: React.FC<AlertListItemProps> = ({ alert, onClick, on
                         </Button>
                         <Button
                             variant="outline"
-                            size="xs"
+                            size="sm"
                             onClick={(e) => { e.stopPropagation(); onReject(); }}
                             className="gap-1 text-[10px] h-6 text-[#E60012] border-[#E60012] hover:bg-[#E60012]/10"
                         >

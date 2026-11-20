@@ -15,10 +15,10 @@ interface CameraExplorerProps {
 }
 
 const EmptyState = () => (
-    <div className="h-full flex flex-col items-center justify-center text-center text-[#A0AAB5] dark:text-[#718096] p-6">
-        <Video className="w-12 h-12 text-[#68727D] dark:text-[#4A5568] mb-3 opacity-50" aria-hidden="true" />
-        <p className="text-sm font-medium text-white dark:text-[#E2E8F0]">Belum Ada Kamera Terdaftar</p>
-        <p className="text-xs text-[#8C9BA5] dark:text-[#718096] mt-1 max-w-sm">
+    <div className="h-full flex flex-col items-center justify-center text-center text-[#A0AAB5] p-6">
+        <Video className="w-12 h-12 text-[#68727D] mb-3 opacity-50" aria-hidden="true" />
+        <p className="text-sm font-medium text-[#252A30]">Belum Ada Kamera Terdaftar</p>
+        <p className="text-xs text-[#8C9BA5] mt-1 max-w-sm">
             Toko ini belum memiliki kamera aktif yang terhubung ke gateway monitoring.
         </p>
     </div>
@@ -35,7 +35,7 @@ const SkeletonGrid = ({ gridSize, gridCols }: { gridSize: GridSize; gridCols: st
 const SkeletonFocusedView = () => (
     <div className="h-full flex items-center justify-center animate-in fade-in zoom-in duration-150" aria-busy="true">
         <div className="w-full max-w-4xl aspect-video">
-            <Skeleton className="w-full h-full rounded-[var(--radius-card)] bg-[#1E2329] dark:bg-[#15191D]" />
+            <Skeleton className="w-full h-full rounded-[var(--radius-card)] bg-[#1E2329]" />
         </div>
     </div>
 );
@@ -96,7 +96,7 @@ const MosaicGrid = ({
             return (
                 <article
                     key={camera.id}
-                    className="relative bg-[#15191D] dark:bg-[#1A1F25] rounded-[var(--radius-card)] overflow-hidden group border border-[#252A30] dark:border-[#2D3748]"
+                    className="relative bg-[#15191D] rounded-[var(--radius-card)] overflow-hidden group border border-[#252A30]"
                     role="listitem"
                 >
                     {/* Camera Card */}
@@ -108,17 +108,17 @@ const MosaicGrid = ({
                                 tabIndex={0}
                                 role="button"
                                 aria-label={isLoading ? `Menyiapkan stream untuk ${camera.name}` : `Mulai stream ${camera.name}`}
-                                className="w-full h-full flex flex-col items-center justify-center text-[#A0AAB5] dark:text-[#718096] p-3 cursor-pointer hover:bg-[#1E2329] dark:hover:bg-[#2D3748] transition-colors focus:outline-none focus:ring-2 focus:ring-[#E60012]/40"
+                                className="w-full h-full flex flex-col items-center justify-center text-[#A0AAB5] p-3 cursor-pointer hover:bg-[#1E2329] transition-colors focus:outline-none focus:ring-2 focus:ring-[#E60012]/40"
                             >
                                 {isLoading ? (
                                     <Loader2 className="w-8 h-8 text-[#E60012] animate-spin mb-2" aria-hidden="true" />
                                 ) : (
                                     <Video className="w-8 h-8 text-[#E60012]/60 mb-2 group-hover:scale-110 transition-transform" aria-hidden="true" />
                                 )}
-                                <p className="text-xs font-semibold text-white dark:text-[#E2E8F0] text-center mb-0.5">{camera.name}</p>
-                                <span className="text-[10px] text-[#8C9BA5] dark:text-[#718096] mb-1">{camera.areaLabel}</span>
+                                <p className="text-xs font-semibold text-white text-center mb-0.5">{camera.name}</p>
+                                <span className="text-[10px] text-[#8C9BA5] mb-1">{camera.areaLabel}</span>
                                 <StatusBadge status={camera.status} />
-                                <p className="text-[10px] mt-2 text-[#68727D] dark:text-[#718096]">
+                                <p className="text-[10px] mt-2 text-[#68727D]">
                                     {isLoading ? 'Menyiapkan stream...' : 'Klik untuk putar stream'}
                                 </p>
                             </div>
@@ -194,7 +194,7 @@ const MosaicGrid = ({
         {displayedCameras.length < gridSize && Array.from({ length: gridSize - displayedCameras.length }).map((_, idx) => (
             <div
                 key={'empty-' + idx}
-                className="bg-[#15191D] dark:bg-[#1A1F25] rounded-[var(--radius-card)] border border-dashed border-[#252A30] dark:border-[#2D3748] flex items-center justify-center p-4 text-[#4A5568] dark:text-[#718096] text-xs"
+                className="bg-[#15191D] rounded-[var(--radius-card)] border border-dashed border-[#252A30] flex items-center justify-center p-4 text-[#4A5568] text-xs"
                 aria-hidden="true"
             >
                 Slot Kamera Kosong
@@ -308,16 +308,16 @@ export const CameraExplorer: React.FC<CameraExplorerProps> = ({
     };
 
     return (
-        <div className="flex flex-col h-full bg-[#15191D] dark:bg-[#1A1F25] rounded-[var(--radius-panel)] overflow-hidden">
+        <div className="flex flex-col h-full bg-[#15191D] rounded-[var(--radius-panel)] overflow-hidden">
             {/* Explorer Header */}
-            <div className="p-3 border-b border-[#252A30] dark:border-[#2D3748] bg-[#1A1F25] dark:bg-[#15191D] flex items-center justify-between">
+            <div className="p-3 border-b border-[#252A30] bg-[#1A1F25] flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <div className="w-7 h-7 bg-[#E60012] rounded flex items-center justify-center text-white text-[10px] font-bold" aria-hidden="true">
                         ▣
                     </div>
                     <div>
-                        <p className="text-sm font-semibold text-white dark:text-[#E2E8F0]">Camera Explorer</p>
-                        <p className="text-[10px] text-[#A0AAB5] dark:text-[#718096]">
+                        <p className="text-sm font-semibold text-white">Camera Explorer</p>
+                        <p className="text-[10px] text-[#A0AAB5]">
                             {cameras.length} kamera tersedia • {activeStreamCount} stream aktif
                         </p>
                     </div>
@@ -325,7 +325,7 @@ export const CameraExplorer: React.FC<CameraExplorerProps> = ({
 
                 <div className="flex items-center gap-2">
                     {/* Grid Size Selector */}
-                    <div className="flex items-center gap-1 bg-[#15191D] dark:bg-[#1A1F25] rounded-[var(--radius-control)] p-0.5" role="group" aria-label="Ukuran grid kamera">
+                    <div className="flex items-center gap-1 bg-[#15191D] rounded-[var(--radius-control)] p-0.5" role="group" aria-label="Ukuran grid kamera">
                         {[1, 4, 9, 16].map((size) => (
                             <button
                                 key={size}
@@ -334,7 +334,7 @@ export const CameraExplorer: React.FC<CameraExplorerProps> = ({
                                 className={'px-2 py-1 rounded text-[10px] font-semibold font-mono transition-colors ' + (
                                     gridSize === size
                                         ? 'bg-[#E60012] text-white shadow-xs'
-                                        : 'text-[#A0AAB5] dark:text-[#718096] hover:text-white dark:hover:text-[#E2E8F0] hover:bg-[#252A30] dark:hover:bg-[#2D3748]'
+                                        : 'text-[#A0AAB5] hover:text-white hover:bg-[#252A30]'
                                 )}
                                 aria-pressed={gridSize === size}
                                 aria-label={`${size === 1 ? '1×1' : size === 4 ? '2×2' : size === 9 ? '3×3' : '4×4'} grid`}
@@ -349,7 +349,7 @@ export const CameraExplorer: React.FC<CameraExplorerProps> = ({
                             variant="ghost"
                             size="sm"
                             onClick={handleReleaseFocus}
-                            className="gap-1.5 text-white hover:bg-[#252A30] dark:hover:bg-[#2D3748]"
+                            className="gap-1.5 text-white hover:bg-[#252A30]"
                             aria-label="Kembali ke tampilan grid"
                         >
                             <Minimize2 className="w-3.5 h-3.5" aria-hidden="true" />
